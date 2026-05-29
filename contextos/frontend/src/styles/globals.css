@@ -1,0 +1,173 @@
+/* ── Google Fonts — must be before all other statements ──────────── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #0a0a0f;
+  color: #e2e8f0;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* app is full-height, internal panels scroll */
+}
+
+/* ── Grid Background Texture ──────────────────────────────────────── */
+#root {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+}
+
+/* ── Scrollbar Styling ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e1e32; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #00d4ff44; }
+
+/* ── Skeleton Shimmer ─────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #151524 0%,
+    #1e1e32 40%,
+    #00d4ff18 50%,
+    #1e1e32 60%,
+    #151524 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s infinite linear;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ── Glow Utilities ───────────────────────────────────────────────── */
+.glow-cyan  { box-shadow: 0 0 12px #00d4ff33, 0 0 1px #00d4ff66; }
+.glow-amber { box-shadow: 0 0 12px #f59e0b33, 0 0 1px #f59e0b66; }
+.glow-red   { box-shadow: 0 0 12px #ef444433, 0 0 1px #ef444466; }
+.glow-green { box-shadow: 0 0 12px #10b98133, 0 0 1px #10b98166; }
+
+/* ── Animated Dot Pulse ───────────────────────────────────────────── */
+.dot-pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ── Card ─────────────────────────────────────────────────────────── */
+.card {
+  background: #0f0f1a;
+  border: 1px solid #1e1e32;
+  border-radius: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover { border-color: #00d4ff22; }
+
+/* ── Tag / Badge ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Fade-in animation ────────────────────────────────────────────── */
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Focus ring ───────────────────────────────────────────────────── */
+button:focus-visible, textarea:focus-visible {
+  outline: 2px solid #00d4ff66;
+  outline-offset: 2px;
+}
+
+/* ── Nav item active state ────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-item:hover { background: #0f0f1a; color: #94a3b8; }
+
+.nav-item.active {
+  background: #00d4ff12;
+  color: #00d4ff;
+  border: 1px solid #00d4ff22;
+}
+
+/* ── Table ────────────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.data-table th {
+  background: #151524;
+  color: #475569;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1e1e32;
+}
+
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e1e3280;
+  color: #94a3b8;
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.data-table tr:hover td { background: #0f0f1a; }

@@ -1,0 +1,4 @@
+sources:
+  github:
+    type: github
+    token: ${GITHUB_TOKEN}
