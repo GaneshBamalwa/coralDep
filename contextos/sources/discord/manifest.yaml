@@ -1,348 +1,311 @@
-kind: source
 name: discord
-display_name: Discord
+version: 1.0.0
+dsl_version: 3
+backend: http
 description: >
   Connect to Discord via a Bot Token to query guilds, channels, messages,
   and mentions using Discord's REST API v10.
-version: "1.0.0"
+inputs:
+  DISCORD_BOT_TOKEN:
+    kind: secret
+    hint: Discord Bot Token (without the 'Bot ' prefix — the source adds it automatically)
+    credential:
+      methods:
+        - type: source_config
+          label: Paste access token
+          description: Paste an existing Discord Bot Token.
 base_url: https://discord.com/api/v10
-
 auth:
-  type: header
-  inputs:
-    - name: DISCORD_BOT_TOKEN
-      kind: secret
-      description: "Discord Bot Token (without the 'Bot ' prefix — the source adds it automatically)"
-      env: DISCORD_BOT_TOKEN
+  type: HeaderAuth
   headers:
-    Authorization: "Bot {{DISCORD_BOT_TOKEN}}"
-
-variables:
-  - name: DISCORD_GUILD_ID
-    kind: variable
-    description: "Default guild (server) ID to query when guild_id is not specified inline"
-    env: DISCORD_GUILD_ID
-    required: false
-
+    - name: Authorization
+      from: template
+      template: "Bot {{input.DISCORD_BOT_TOKEN}}"
 tables:
   - name: guilds
-    display_name: Guilds
-    description: "All Discord guilds (servers) the bot is a member of"
-    kind: table
-    endpoint:
+    description: All Discord guilds (servers) the bot is a member of
+    request:
       method: GET
       path: /users/@me/guilds
+    pagination:
+      mode: none
     response:
-      root: "$"
-      kind: array
+      row_strategy: direct
     columns:
       - name: id
-        type: string
-        description: "Unique guild snowflake ID"
-        json_path: id
+        type: Utf8
+        nullable: false
+        description: Unique guild snowflake ID
+        expr:
+          kind: path
+          path:
+            - id
       - name: name
-        type: string
-        description: "Guild display name"
-        json_path: name
+        type: Utf8
+        nullable: false
+        description: Guild display name
+        expr:
+          kind: path
+          path:
+            - name
       - name: icon
-        type: string
-        description: "Guild icon hash"
-        json_path: icon
+        type: Utf8
         nullable: true
+        description: Guild icon hash
+        expr:
+          kind: path
+          path:
+            - icon
       - name: owner
-        type: boolean
-        description: "True if the user is the owner of the guild"
-        json_path: owner
+        type: Boolean
         nullable: true
+        description: True if the user is the owner of the guild
+        expr:
+          kind: path
+          path:
+            - owner
       - name: permissions
-        type: string
-        description: "Total permissions for the user in the guild"
-        json_path: permissions
+        type: Utf8
         nullable: true
+        description: Total permissions for the user in the guild
+        expr:
+          kind: path
+          path:
+            - permissions
       - name: approximate_member_count
-        type: integer
-        description: "Approximate number of members"
-        json_path: approximate_member_count
+        type: Int64
         nullable: true
+        description: Approximate number of members
+        expr:
+          kind: path
+          path:
+            - approximate_member_count
 
   - name: channels
-    display_name: Channels
-    description: "All channels in a given guild"
-    kind: table
-    endpoint:
-      method: GET
-      path: /guilds/{{guild_id}}/channels
-    variables:
+    description: All channels in a given guild
+    filters:
       - name: guild_id
-        type: string
-        description: "The guild snowflake ID to list channels for"
-        default: "{{DISCORD_GUILD_ID}}"
         required: true
+    request:
+      method: GET
+      path: /guilds/{{filter.guild_id}}/channels
+    pagination:
+      mode: none
     response:
-      root: "$"
-      kind: array
+      row_strategy: direct
     columns:
-      - name: id
-        type: string
-        description: "Unique channel snowflake ID"
-        json_path: id
       - name: guild_id
-        type: string
-        description: "Parent guild snowflake ID"
-        json_path: guild_id
+        type: Utf8
+        nullable: true
+        virtual: true
+        expr:
+          kind: from_filter
+          key: guild_id
+      - name: id
+        type: Utf8
+        nullable: false
+        description: Unique channel snowflake ID
+        expr:
+          kind: path
+          path:
+            - id
       - name: name
-        type: string
-        description: "Channel name"
-        json_path: name
+        type: Utf8
         nullable: true
+        description: Channel name
+        expr:
+          kind: path
+          path:
+            - name
       - name: type
-        type: integer
-        description: "Channel type (0=text, 2=voice, 4=category, 5=announcement…)"
-        json_path: type
+        type: Int64
+        nullable: false
+        description: Channel type (0=text, 2=voice, 4=category, 5=announcement)
+        expr:
+          kind: path
+          path:
+            - type
       - name: topic
-        type: string
-        description: "Channel topic / description"
-        json_path: topic
+        type: Utf8
         nullable: true
+        description: Channel topic / description
+        expr:
+          kind: path
+          path:
+            - topic
       - name: position
-        type: integer
-        description: "Sort position within the guild"
-        json_path: position
-      - name: nsfw
-        type: boolean
-        description: "Whether the channel is NSFW"
-        json_path: nsfw
+        type: Int64
         nullable: true
+        description: Sort position within the guild
+        expr:
+          kind: path
+          path:
+            - position
+      - name: nsfw
+        type: Boolean
+        nullable: true
+        description: Whether the channel is NSFW
+        expr:
+          kind: path
+          path:
+            - nsfw
 
   - name: messages
-    display_name: Messages
-    description: "Recent messages in a given channel"
-    kind: table
-    endpoint:
-      method: GET
-      path: /channels/{{channel_id}}/messages
-      params:
-        limit: "{{limit}}"
-    variables:
+    description: Recent messages in a given channel
+    filters:
       - name: channel_id
-        type: string
-        description: "The channel snowflake ID to retrieve messages from"
         required: true
       - name: limit
-        type: integer
-        description: "Maximum number of messages to return (1–100)"
-        default: 50
         required: false
+    request:
+      method: GET
+      path: /channels/{{filter.channel_id}}/messages
+      query:
+        - name: limit
+          from: filter
+          key: limit
+    pagination:
+      mode: none
     response:
-      root: "$"
-      kind: array
+      row_strategy: direct
     columns:
-      - name: id
-        type: string
-        description: "Unique message snowflake ID"
-        json_path: id
       - name: channel_id
-        type: string
-        description: "Channel the message belongs to"
-        json_path: channel_id
+        type: Utf8
+        nullable: true
+        virtual: true
+        expr:
+          kind: from_filter
+          key: channel_id
+      - name: limit
+        type: Int64
+        nullable: true
+        virtual: true
+        expr:
+          kind: from_filter
+          key: limit
+      - name: id
+        type: Utf8
+        nullable: false
+        description: Unique message snowflake ID
+        expr:
+          kind: path
+          path:
+            - id
       - name: content
-        type: string
-        description: "Raw text content of the message"
-        json_path: content
+        type: Utf8
+        nullable: false
+        description: Raw text content of the message
+        expr:
+          kind: path
+          path:
+            - content
       - name: timestamp
-        type: timestamp
-        description: "ISO-8601 timestamp when the message was sent"
-        json_path: timestamp
+        type: Utf8
+        nullable: false
+        description: ISO-8601 timestamp when the message was sent
+        expr:
+          kind: path
+          path:
+            - timestamp
       - name: edited_timestamp
-        type: timestamp
-        description: "ISO-8601 timestamp when the message was edited"
-        json_path: edited_timestamp
+        type: Utf8
         nullable: true
+        description: ISO-8601 timestamp when the message was edited
+        expr:
+          kind: path
+          path:
+            - edited_timestamp
       - name: author__id
-        type: string
-        description: "Author's user snowflake ID"
-        json_path: author__id
-      - name: author__username
-        type: string
-        description: "Author's username"
-        json_path: author__username
-      - name: author__discriminator
-        type: string
-        description: "Author's discriminator"
-        json_path: author__discriminator
+        type: Utf8
         nullable: true
+        description: Author user snowflake ID
+        expr:
+          kind: path
+          path:
+            - author
+            - id
+      - name: author__username
+        type: Utf8
+        nullable: true
+        description: Author username
+        expr:
+          kind: path
+          path:
+            - author
+            - username
+      - name: author__discriminator
+        type: Utf8
+        nullable: true
+        description: Author discriminator
+        expr:
+          kind: path
+          path:
+            - author
+            - discriminator
       - name: mention_everyone
-        type: boolean
-        description: "True if the message mentions everyone"
-        json_path: mention_everyone
+        type: Boolean
+        nullable: true
+        description: True if the message mentions everyone
+        expr:
+          kind: path
+          path:
+            - mention_everyone
       - name: pinned
-        type: boolean
-        description: "True if the message is pinned"
-        json_path: pinned
+        type: Boolean
+        nullable: true
+        description: True if the message is pinned
+        expr:
+          kind: path
+          path:
+            - pinned
 
   - name: guild_members
-    display_name: Guild Members
-    description: "Members of a given guild"
-    kind: table
-    endpoint:
-      method: GET
-      path: /guilds/{{guild_id}}/members
-    variables:
+    description: Members of a given guild
+    filters:
       - name: guild_id
-        type: string
-        description: "The guild snowflake ID to retrieve members from"
-        default: "{{DISCORD_GUILD_ID}}"
         required: true
+    request:
+      method: GET
+      path: /guilds/{{filter.guild_id}}/members
+    pagination:
+      mode: none
     response:
-      root: "$"
-      kind: array
+      row_strategy: direct
     columns:
-      - name: user__id
-        type: string
-        json_path: user__id
-      - name: user__username
-        type: string
-        json_path: user__username
-      - name: nick
-        type: string
-        json_path: nick
+      - name: guild_id
+        type: Utf8
         nullable: true
+        virtual: true
+        expr:
+          kind: from_filter
+          key: guild_id
+      - name: user__id
+        type: Utf8
+        nullable: false
+        expr:
+          kind: path
+          path:
+            - user
+            - id
+      - name: user__username
+        type: Utf8
+        nullable: false
+        expr:
+          kind: path
+          path:
+            - user
+            - username
+      - name: nick
+        type: Utf8
+        nullable: true
+        expr:
+          kind: path
+          path:
+            - nick
       - name: joined_at
-        type: timestamp
-        json_path: joined_at
-      - name: roles
-        type: json
-        json_path: roles
-
-  - name: mentions
-    display_name: Mentions
-    description: >
-      Messages in a channel that contain at least one @mention.
-      This is a filtered view over discord.messages — only rows where
-      has_mentions = true are returned.
-    kind: view
-    source_table: messages
-    filter: "has_mentions = true"
-    columns:
-      - name: id
-        type: string
-      - name: channel_id
-        type: string
-      - name: author_id
-        type: string
-      - name: author_username
-        type: string
-      - name: content
-        type: string
-      - name: timestamp
-        type: timestamp
-      - name: has_mentions
-        type: boolean
-
-table_functions:
-  - name: channel_messages
-    display_name: Channel Messages
-    description: "Fetch the most recent messages for a specific channel"
-    kind: table_function
-    parameters:
-      - name: channel_id
-        type: string
-        description: "Channel snowflake ID"
-        required: true
-      - name: limit
-        type: integer
-        description: "Number of messages to return (max 100)"
-        default: 50
-        required: false
-    endpoint:
-      method: GET
-      path: /channels/{{channel_id}}/messages
-      params:
-        limit: "{{limit}}"
-    response:
-      root: "$"
-      kind: array
-    columns:
-      - name: id
-        type: string
-        json_path: id
-      - name: channel_id
-        type: string
-        json_path: channel_id
-      - name: author_id
-        type: string
-        json_path: author__id
-      - name: author_username
-        type: string
-        json_path: author__username
-      - name: content
-        type: string
-        json_path: content
-      - name: timestamp
-        type: timestamp
-        json_path: timestamp
-      - name: has_mentions
-        type: boolean
-        json_path: _computed__has_mentions
-        computed:
-          expression: "length(mentions) > 0"
-
-  - name: search_messages
-    display_name: Search Messages
-    description: >
-      Search messages across all channels in a guild.
-      Uses Discord's native search endpoint when available; falls back to
-      fetching recent messages and filtering locally by the query string.
-    kind: table_function
-    parameters:
-      - name: guild_id
-        type: string
-        description: "Guild snowflake ID to search within"
-        default: "{{DISCORD_GUILD_ID}}"
-        required: true
-      - name: content
-        type: string
-        description: "Text to search for inside message content"
-        required: true
-      - name: limit
-        type: integer
-        description: "Maximum number of results"
-        default: 25
-        required: false
-    endpoint:
-      method: GET
-      path: /guilds/{{guild_id}}/messages/search
-      params:
-        content: "{{content}}"
-        limit: "{{limit}}"
-    fallback:
-      strategy: local_filter
-      filter_column: content
-      filter_contains: "{{content}}"
-    response:
-      root: "$.messages[*][0]"
-      kind: array
-    columns:
-      - name: id
-        type: string
-        json_path: id
-      - name: channel_id
-        type: string
-        json_path: channel_id
-      - name: author_id
-        type: string
-        json_path: author__id
-      - name: author_username
-        type: string
-        json_path: author__username
-      - name: content
-        type: string
-        json_path: content
-      - name: timestamp
-        type: timestamp
-        json_path: timestamp
-      - name: has_mentions
-        type: boolean
-        json_path: _computed__has_mentions
-        computed:
-          expression: "length(mentions) > 0"
+        type: Utf8
+        nullable: false
+        expr:
+          kind: path
+          path:
+            - joined_at

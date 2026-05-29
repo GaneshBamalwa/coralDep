@@ -62,6 +62,8 @@ function buildCoralEnv() {
     ...(process.env.SLACK_TOKEN    && { SLACK_TOKEN:    process.env.SLACK_TOKEN }),
     // Notion
     ...(process.env.NOTION_TOKEN   && { NOTION_TOKEN:   process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
+    // Discord
+    ...(process.env.DISCORD_BOT_TOKEN && { DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN }),
   };
 }
 
@@ -203,6 +205,8 @@ app.get("/api/briefing", async (req, res) => {
       gmail_profile: `SELECT email_address, messages_total, threads_total FROM gmail.profile LIMIT 1`,
 
       notion_search: `SELECT * FROM notion.search LIMIT 10`,
+      
+      discord: `SELECT id, name FROM discord.guilds LIMIT 5`,
     };
 
     // Run all queries in parallel; failed ones return source_error
@@ -237,6 +241,7 @@ app.get("/api/briefing", async (req, res) => {
       const gmailInbox = sources.gmail_inbox?.rows || [];
       const gmailProfile = sources.gmail_profile?.rows?.[0] || {};
       const notionRows = sources.notion_search?.rows || [];
+      const discordRows = sources.discord?.rows || [];
 
       const payload = {
         current_time: new Date().toISOString(),
@@ -256,6 +261,9 @@ app.get("/api/briefing", async (req, res) => {
         })),
         notion_tasks: notionRows.slice(0, 5).map(r => ({
           title: r.title || r.name, status: r.status,
+        })),
+        discord_guilds: discordRows.slice(0, 5).map(r => ({
+          name: r.name
         })),
       };
 
