@@ -75,7 +75,10 @@ function normalizeValue(raw) {
   if (s === "true") return true;
   if (s === "false") return false;
   // Integer
-  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  if (/^\d+$/.test(s)) {
+    if (s.length >= 16) return s;
+    return parseInt(s, 10);
+  }
   // Float
   if (/^\d+\.\d+$/.test(s)) return parseFloat(s);
   return s;
