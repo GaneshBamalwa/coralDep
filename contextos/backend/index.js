@@ -44,45 +44,29 @@ const openRouter = process.env.OPENROUTER_API_KEY
     })
   : null;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Core: run a Coral SQL query via CLI
-// ─────────────────────────────────────────────────────────────────────────────
 // Build a credential env object from .env so Coral can bypass the Windows keychain.
-// When these env vars are present, Coral reads secrets from them directly.
 function buildCoralEnv() {
   return {
     ...process.env,
-    // GitHub
-    ...(process.env.GITHUB_TOKEN   && { GITHUB_TOKEN:   process.env.GITHUB_TOKEN }),
-    // Gmail (OAuth access token stored in .env)
-    ...(process.env.GMAIL_ACCESS_TOKEN && { GMAIL_ACCESS_TOKEN: process.env.GMAIL_ACCESS_TOKEN }),
-    // Google Calendar (OAuth access token stored in .env)
+    ...(process.env.GITHUB_TOKEN            && { GITHUB_TOKEN:                  process.env.GITHUB_TOKEN }),
+    ...(process.env.GMAIL_ACCESS_TOKEN      && { GMAIL_ACCESS_TOKEN:            process.env.GMAIL_ACCESS_TOKEN }),
     ...(process.env.GOOGLE_CALENDAR_ACCESS_TOKEN && { GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN }),
-    // Slack
-    ...(process.env.SLACK_TOKEN    && { SLACK_TOKEN:    process.env.SLACK_TOKEN }),
-    // Notion
-    ...(process.env.NOTION_TOKEN   && { NOTION_TOKEN:   process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
-    // Discord
-    ...(process.env.DISCORD_BOT_TOKEN && { DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN }),
+    ...(process.env.SLACK_TOKEN             && { SLACK_TOKEN:                   process.env.SLACK_TOKEN }),
+    ...(process.env.NOTION_TOKEN            && { NOTION_TOKEN:                  process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
+    ...(process.env.DISCORD_BOT_TOKEN       && { DISCORD_BOT_TOKEN:             process.env.DISCORD_BOT_TOKEN }),
   };
 }
 
 function runCoralQuery(sql, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
-    // Flatten multi-line SQL and escape double-quotes
     const normalized = sql.replace(/\s+/g, ' ').trim().replace(/"/g, '\\"');
     const env = buildCoralEnv();
-
-    // shell:false so env vars (GITHUB_TOKEN etc.) pass directly to coral.exe
-    // without PowerShell stripping them — this bypasses the Windows keychain.
     exec(
       `coral sql "${normalized}"`,
       { timeout: timeoutMs, env, shell: false },
       (err, stdout, stderr) => {
         if (err) {
-          if (err.killed || err.signal === 'SIGTERM') {
-             return reject(new Error('timeout'));
-          }
+          if (err.killed || err.signal === 'SIGTERM') return reject(new Error('timeout'));
           return reject(new Error(stderr?.trim() || err.message));
         }
         resolve(stdout);
@@ -91,8 +75,6 @@ function runCoralQuery(sql, timeoutMs = 30_000) {
   });
 }
 
-
-// Safe wrapper — always resolves, never throws
 async function safeQuery(sql, label = "unknown") {
   try {
     const stdout = await runCoralQuery(sql, 15000);
@@ -108,23 +90,19 @@ async function safeQuery(sql, label = "unknown") {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/query  — raw SQL console
-// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/query
 app.post("/api/query", async (req, res) => {
   const { sql } = req.body;
   if (!sql || typeof sql !== "string") {
     return res.status(400).json({ error: "sql field is required" });
   }
-
   if (MOCK_MODE) {
     return res.json({
       columns: ["result"],
-      rows: [{ result: "MOCK_MODE=true — set MOCK_MODE=false and restart to run real queries" }],
+      rows: [{ result: "MOCK_MODE=true -- set MOCK_MODE=false and restart to run real queries" }],
       mock: true,
     });
   }
-
   try {
     const stdout = await runCoralQuery(sql, 30_000);
     return res.json(parseCoralOutput(stdout));
@@ -133,9 +111,7 @@ app.post("/api/query", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/schema  — list all tables across all sources
-// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/schema
 app.get("/api/schema", async (req, res) => {
   if (MOCK_MODE) {
     return res.json({
@@ -158,7 +134,6 @@ app.get("/api/schema", async (req, res) => {
       mock: true,
     });
   }
-
   try {
     const stdout = await runCoralQuery(
       "SELECT schema_name, table_name FROM coral.tables ORDER BY 1, 2",
@@ -170,46 +145,35 @@ app.get("/api/schema", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/briefing  — parallel queries → Claude synthesis
-// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/briefing
 app.get("/api/briefing", async (req, res) => {
   let sources;
 
   if (MOCK_MODE) {
     sources = {
-      calendar:      { rows: mockCalendarEvents,  source_error: null },
-      github_issues: { rows: mockGithubPRs,       source_error: null },
-      github_pulls:  { rows: mockGithubPRs,       source_error: null },
-      slack_channels:{ rows: mockSlackMessages,   source_error: null },
-      gmail_labels:  { rows: [],                  source_error: null },
-      notion_search: { rows: mockNotionTasks,     source_error: null },
-      discord:       { rows: mockDiscordMessages, source_error: null },
+      calendar:       { rows: mockCalendarEvents,  source_error: null },
+      github_issues:  { rows: mockGithubPRs,       source_error: null },
+      github_pulls:   { rows: mockGithubPRs,       source_error: null },
+      slack_channels: { rows: mockSlackMessages,   source_error: null },
+      gmail_labels:   { rows: [],                  source_error: null },
+      notion_search:  { rows: mockNotionTasks,     source_error: null },
+      discord:        { rows: mockDiscordMessages, source_error: null },
     };
   } else {
     const queries = {
       calendar: `SELECT summary, start_date_time, end_date_time, start_date, end_date, status FROM google_calendar.events LIMIT 10`,
-
-      // GitHub conditionally enabled
       github_issues: GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
         ? `SELECT number, title, state, created_at, updated_at, comments FROM github.issues WHERE owner = '${GITHUB_OWNER}' AND repo = '${GITHUB_REPO}' AND state = 'open' ORDER BY updated_at DESC LIMIT 10`
         : null,
       github_pulls: GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
         ? `SELECT number, title, state, updated_at, user__login FROM github.pulls WHERE owner = '${GITHUB_OWNER}' AND repo = '${GITHUB_REPO}' AND state = 'open' ORDER BY updated_at DESC LIMIT 10`
         : null,
-
       slack_channels: `SELECT id, name, topic, num_members FROM slack.channels LIMIT 20`,
-
-      gmail_inbox: `SELECT id, thread_id FROM gmail.messages WHERE label_ids = 'INBOX' LIMIT 10`,
-
-      gmail_profile: `SELECT email_address, messages_total, threads_total FROM gmail.profile LIMIT 1`,
-
-      notion_search: `SELECT * FROM notion.search LIMIT 10`,
-      
-      discord: `SELECT id, name FROM discord.guilds LIMIT 5`,
+      gmail_inbox:    `SELECT id, thread_id FROM gmail.messages WHERE label_ids = 'INBOX' LIMIT 10`,
+      gmail_profile:  `SELECT email_address, messages_total, threads_total FROM gmail.profile LIMIT 1`,
+      notion_search:  `SELECT * FROM notion.search LIMIT 10`,
     };
 
-    // Run all queries in parallel; failed ones return source_error
     const entries = Object.entries(queries).filter(([, sql]) => sql !== null);
     const results = await Promise.allSettled(
       entries.map(([label, sql]) => safeQuery(sql, label))
@@ -218,118 +182,203 @@ app.get("/api/briefing", async (req, res) => {
     sources = {};
     entries.forEach(([label], i) => {
       const r = results[i];
-      sources[label] =
-        r.status === "fulfilled"
-          ? r.value
-          : { rows: [], columns: [], source: label, source_error: r.reason?.message };
+      sources[label] = r.status === "fulfilled"
+        ? r.value
+        : { rows: [], columns: [], source: label, source_error: r.reason?.message };
     });
+
+    // Discord: sequential (channels require guild_id)
+    try {
+      const guildsResult = await safeQuery("SELECT id, name FROM discord.guilds LIMIT 5", "discord_guilds");
+      const firstGuildId = guildsResult.rows?.[0]?.id;
+      let discordMessages = [];
+      if (firstGuildId) {
+        const channelsResult = await safeQuery(
+          `SELECT id, name FROM discord.channels WHERE guild_id = '${firstGuildId}' LIMIT 10`,
+          "discord_channels"
+        );
+        const firstChannelId = channelsResult.rows?.[0]?.id;
+        if (firstChannelId) {
+          const msgsResult = await safeQuery(
+            `SELECT author__username, content, timestamp FROM discord.messages WHERE channel_id = '${firstChannelId}' AND limit = 20`,
+            "discord_messages"
+          );
+          discordMessages = msgsResult.rows || [];
+        }
+      }
+      sources.discord = { rows: discordMessages, source_error: null };
+    } catch (e) {
+      sources.discord = { rows: [], source_error: e.message };
+    }
   }
 
-  // Collect failed sources for the response metadata
   const failed_sources = Object.entries(sources)
     .filter(([, v]) => v.source_error)
     .map(([k]) => k);
 
-  // ── OpenRouter synthesis ──────────────────────────────────────────────────────
   let briefing = MOCK_MODE ? mockBriefing : null;
 
   if (!MOCK_MODE && openRouter) {
     try {
-      // Build a rich but token-efficient payload for OpenRouter
-      const calRows = sources.calendar?.rows || [];
-      const slackRows = sources.slack_channels?.rows || [];
-      const gmailInbox = sources.gmail_inbox?.rows || [];
-      const gmailProfile = sources.gmail_profile?.rows?.[0] || {};
-      const notionRows = sources.notion_search?.rows || [];
-      const discordRows = sources.discord?.rows || [];
+      const now     = new Date();
+      const todayStr = now.toISOString().split("T")[0];
 
-      const payload = {
-        current_time: new Date().toISOString(),
-        calendar_events: calRows.slice(0, 5).map(r => ({
+      const calRows      = sources.calendar?.rows       || [];
+      const slackRows    = sources.slack_channels?.rows  || [];
+      const gmailInbox   = sources.gmail_inbox?.rows    || [];
+      const gmailProfile = sources.gmail_profile?.rows?.[0] || {};
+      const notionRows   = sources.notion_search?.rows  || [];
+      const discordRows  = sources.discord?.rows        || [];
+
+      // Derived signals
+      const todayEvents = calRows
+        .map(r => ({
           summary: r.summary,
-          start: r.start_date_time || r.start_date,
-          end: r.end_date_time || r.end_date,
-          status: r.status,
+          start: new Date((r.start_date_time || r.start_date || "").replace(/Z$/, "")),
+          end:   new Date((r.end_date_time   || r.end_date   || "").replace(/Z$/, "")),
+        }))
+        .filter(e => !isNaN(e.start) && e.start.toISOString().startsWith(todayStr))
+        .sort((a, b) => a.start - b.start);
+
+      const minutesUntilFirstMeeting = todayEvents.length > 0
+        ? Math.round((todayEvents[0].start - now) / 60000)
+        : null;
+
+      const totalMeetingMinutesToday = todayEvents.reduce(
+        (sum, e) => sum + Math.max(0, Math.round((e.end - e.start) / 60000)), 0
+      );
+
+      let longestFreeBlockMinutes = 0;
+      for (let i = 1; i < todayEvents.length; i++) {
+        const gap = Math.round((todayEvents[i].start - todayEvents[i - 1].end) / 60000);
+        if (gap > longestFreeBlockMinutes) longestFreeBlockMinutes = gap;
+      }
+
+      const backToBackCount = todayEvents.filter((e, i) => {
+        if (i === 0) return false;
+        return (e.start - todayEvents[i - 1].end) < 10 * 60 * 1000;
+      }).length;
+
+      const threeDaysAgo = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+      const overdueNotionTasks = notionRows.filter(t => {
+        const due = t.due_date;
+        return due && due <= todayStr && (t.status || "").toLowerCase() !== "done";
+      });
+      const staleTasks = notionRows.filter(t => {
+        const edited = t.last_edited_time || t.updated_at;
+        return edited && edited < threeDaysAgo;
+      });
+
+      const derived = {
+        minutesUntilFirstMeeting,
+        totalMeetingMinutesToday,
+        longestFreeBlockMinutes,
+        hasBackToBackMeetings: backToBackCount > 0,
+        backToBackCount,
+        overdueNotionTaskCount: overdueNotionTasks.length,
+        staleTaskCount: staleTasks.length,
+        firstMeetingTitle: todayEvents[0]?.summary || null,
+        firstMeetingTime: todayEvents[0]?.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) || null,
+      };
+
+      // Cross-source context
+      const context = {
+        current_time: now.toISOString(),
+        derived,
+        calendar_events: todayEvents.map(e => ({
+          summary: e.summary,
+          start: e.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+          end:   e.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
         })),
         gmail: {
-          email: gmailProfile.email_address,
           inbox_count: gmailInbox.length,
           total_messages: gmailProfile.messages_total,
         },
-        slack_channels: slackRows.slice(0, 5).map(r => ({
-          name: r.name, members: r.num_members, topic: r.topic || null,
-        })),
-        notion_tasks: notionRows.slice(0, 5).map(r => ({
-          title: r.title || r.name, status: r.status,
-        })),
-        discord_guilds: discordRows.slice(0, 5).map(r => ({
-          name: r.name
-        })),
+        slack_channels: slackRows.slice(0, 5).map(r => ({ name: r.name, members: r.num_members, topic: r.topic || null })),
+        notion_tasks: notionRows.slice(0, 8).map(r => ({ title: r.title || r.name, status: r.status, last_edited: r.last_edited_time })),
+        urgent_notion_tasks: overdueNotionTasks.map(t => ({ title: t.title || t.name, due: t.due_date })),
+        stale_tasks: staleTasks.slice(0, 3).map(t => ({ title: t.title || t.name, last_edited: t.last_edited_time })),
+        discord: discordRows.slice(0, 10).map(r => ({ author: r.author__username, content: r.content, timestamp: r.timestamp })),
       };
 
-      const systemPrompt = `You are ContextOS, an AI morning briefing assistant. The user is a developer/maker.
-Given their live workflow data, produce a helpful Morning Briefing as a JSON object with EXACTLY these keys:
-- urgent: array of {item: string, source: string, reason: string} — things needing immediate attention
-- waiting_on_you: array of {item: string, source: string, age_hours: number} — stale items waiting for the user
-- best_focus_window: string — the best 2-hour block for deep work today based on calendar gaps
-- summary: string — 2-3 upbeat, specific sentences about their day
+      const sourcesWithData = [calRows, slackRows, gmailInbox, notionRows, discordRows].filter(s => s.length > 0).length;
 
-If data for any section is sparse or missing, you MUST still generate useful fallback content for that section (e.g. suggest a focus block based on time of day if calendar is empty, note "inbox is clear" if Gmail returns zero messages). Be specific and encouraging. You MUST return valid JSON with EVERY expected key present, even if the value is a fallback string or empty array. Return ONLY valid JSON with no markdown fences.`;
+      const systemPrompt = `You are a chief of staff with full visibility into this person's calendar, inbox, tasks, and team communications.
+
+Your job is NOT to summarize each tool separately. You must reason across all sources together and surface only what actually matters.
+
+You will produce a structured briefing with exactly these sections:
+
+SITUATION: One sentence. What kind of day is today based on the data?
+
+BEFORE YOU START: 2-3 specific actions to take RIGHT NOW before the first meeting. Be concrete - name the person, the task, the channel. No generic advice.
+
+WATCH OUT: 1-3 things that look risky, conflicted, or falling through the cracks. Cross-reference sources - back-to-back meetings with no prep gap, overdue tasks, stale items.
+
+BEST FOCUS WINDOW: Based on calendar gaps, tell them exactly when their best uninterrupted work block is today and what to use it for.
+
+ONE THING: The single most important thing they should do in the next 30 minutes. One sentence, completely specific.
+
+Rules:
+- If something is fine, do not mention it
+- Never say "it looks like" or "based on the data"
+- Be direct, specific, and use names and times from the actual data
+- If a section has nothing worth flagging, write "Clear." as the value
+- ${sourcesWithData < 2 ? "Fewer than 2 sources have data - generate reasonable defaults for every section based on the current time of day." : ""}
+- Return ONLY valid JSON with exactly these keys: situation, beforeYouStart, watchOut, bestFocusWindow, oneThing
+- beforeYouStart and watchOut must be arrays of strings. All other values are strings.
+- Never use markdown fences. Raw JSON only.`;
 
       const completion = await openRouter.chat.completions.create({
         model: "meta-llama/llama-3.3-70b-instruct",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `My workflow data as of ${new Date().toLocaleString()}:\n${JSON.stringify(payload, null, 2)}\n\nGenerate my Morning Briefing JSON.` }
+          { role: "user", content: `Workflow data as of ${now.toLocaleString()}:\n${JSON.stringify(context, null, 2)}\n\nGenerate my Morning Briefing JSON.` }
         ],
-        max_tokens: 800
+        max_tokens: 1000
       });
 
       let content = completion.choices[0].message.content.trim();
-      if (content.startsWith("\`\`\`")) {
-        content = content.replace(/^\`\`\`(?:json)?\n/, "").replace(/\n\`\`\`$/, "").trim();
+      if (content.startsWith("```")) {
+        content = content.replace(/^```(?:json)?\n/, "").replace(/\n```$/, "").trim();
       }
       try {
         briefing = JSON.parse(content);
       } catch (parseErr) {
         console.error("[openrouter] failed to parse JSON response:", parseErr.message);
         briefing = {
-          urgent: [],
-          waiting_on_you: [],
-          best_focus_window: "Unable to compute — AI returned malformed data",
-          summary: "We had trouble assembling your briefing. Please try again.",
+          situation: "Unable to compute - AI returned malformed data.",
+          beforeYouStart: [],
+          watchOut: [],
+          bestFocusWindow: "Try again in a moment.",
+          oneThing: "Retry the briefing.",
           synthesis_error: "JSON Parse Error",
         };
       }
     } catch (err) {
       console.error("[openrouter] briefing synthesis failed:", err.message);
       briefing = {
-        urgent: [],
-        waiting_on_you: [],
-        best_focus_window: "Unable to compute — OpenRouter API error",
-        summary: "Briefing synthesis failed: " + err.message,
+        situation: "Briefing synthesis failed: " + err.message,
+        beforeYouStart: [],
+        watchOut: [],
+        bestFocusWindow: "Unable to compute - OpenRouter API error.",
+        oneThing: "Check your OpenRouter API key and retry.",
         synthesis_error: err.message,
       };
     }
   } else if (!MOCK_MODE && !openRouter) {
-    // No OpenRouter key — build a minimal briefing from raw data directly
     briefing = buildFallbackBriefing(sources);
   }
 
   res.json({ briefing, sources, failed_sources });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/focus-debt
-// ─────────────────────────────────────────────────────────────────────────────
 app.get("/api/focus-debt", async (req, res) => {
   if (MOCK_MODE) return res.json(mockFocusDebt);
 
   const [notionResult, githubResult] = await Promise.all([
-    safeQuery(
-      "SELECT * FROM notion.search LIMIT 50",
-      "notion"
-    ),
+    safeQuery("SELECT * FROM notion.search LIMIT 50", "notion"),
     GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
       ? safeQuery(
           `SELECT * FROM github.issues WHERE owner = '${GITHUB_OWNER}' AND repo = '${GITHUB_REPO}' ORDER BY created_at DESC LIMIT 50`,
@@ -338,7 +387,6 @@ app.get("/api/focus-debt", async (req, res) => {
       : Promise.resolve({ rows: [], columns: [], source: "github", status: "disabled" }),
   ]);
 
-  // Tally notion tasks by status
   let planned = 0;
   let completed = 0;
   for (const row of notionResult.rows) {
@@ -348,7 +396,6 @@ app.get("/api/focus-debt", async (req, res) => {
   }
   if (planned === 0) planned = notionResult.rows.length;
 
-  // Group GitHub issues by day for the chart
   const dayMap = {};
   for (const row of githubResult.rows) {
     const day = new Date(row.created_at || row.updated_at).toLocaleDateString("en-US", { weekday: "short" });
@@ -368,9 +415,7 @@ app.get("/api/focus-debt", async (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/unfinished-loops
-// ─────────────────────────────────────────────────────────────────────────────
 app.get("/api/unfinished-loops", async (req, res) => {
   if (MOCK_MODE) return res.json(mockUnfinishedLoops);
 
@@ -381,13 +426,12 @@ app.get("/api/unfinished-loops", async (req, res) => {
           "github"
         )
       : Promise.resolve({ rows: [], columns: [], source: "github", status: "disabled" }),
-
     safeQuery("SELECT * FROM notion.search LIMIT 20", "notion"),
   ]);
 
   const loops = [
     ...githubResult.rows.map((r) => ({
-      item: `#${r.number} — ${r.title}`,
+      item: `#${r.number} - ${r.title}`,
       source: "github",
       touches: parseInt(r.comments, 10) || 0,
       last_touched: r.updated_at,
@@ -403,7 +447,7 @@ app.get("/api/unfinished-loops", async (req, res) => {
         source: "notion",
         touches: 3,
         last_touched: r.last_edited_time || r.updated_at,
-        description: `Status: "${r.status}" — stuck in progress`,
+        description: `Status: "${r.status}" - stuck in progress`,
       })),
   ];
 
@@ -416,29 +460,23 @@ app.get("/api/unfinished-loops", async (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/sources
-// ─────────────────────────────────────────────────────────────────────────────
 app.get("/api/sources", async (req, res) => {
   if (MOCK_MODE) return res.json(mockSources);
 
   const KNOWN = ["google_calendar", "github", "gmail", "slack", "notion", "discord"];
-
   try {
-    // Use coral.tables to infer which schemas are registered
     const stdout = await runCoralQuery(
       "SELECT schema_name, COUNT(*) as table_count FROM coral.tables GROUP BY schema_name ORDER BY 1",
       10_000
     );
     const { rows } = parseCoralOutput(stdout);
     const connectedMap = Object.fromEntries(rows.map((r) => [r.schema_name, r.table_count]));
-
     const sources = KNOWN.map((name) => ({
       name,
       connected: name in connectedMap,
       rows_cached: connectedMap[name] ? parseInt(connectedMap[name], 10) : null,
     }));
-
     return res.json(sources);
   } catch (err) {
     return res.json(
@@ -447,9 +485,7 @@ app.get("/api/sources", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/health
-// ─────────────────────────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -461,100 +497,69 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Fallback briefing builder (no Claude key)
-// ─────────────────────────────────────────────────────────────────────────────
+// Fallback briefing builder (no OpenRouter key)
 function buildFallbackBriefing(sources) {
   const urgent = [];
   const waiting_on_you = [];
 
-  // Open PRs with recent activity
   for (const pr of (sources.github_pulls?.rows || []).slice(0, 2)) {
-    urgent.push({
-      item: `PR #${pr.number}: ${pr.title}`,
-      source: "github",
-      reason: `Open pull request last updated ${pr.updated_at}`,
-    });
+    urgent.push(`PR #${pr.number}: ${pr.title} (last updated ${pr.updated_at})`);
   }
-
-  // Notion tasks
   for (const task of (sources.notion_search?.rows || []).slice(0, 3)) {
-    waiting_on_you.push({
-      item: task.title || task.name || "(untitled task)",
-      source: "notion",
-      age_hours: 24,
-    });
+    waiting_on_you.push(task.title || task.name || "(untitled task)");
   }
 
-  // Calendar events today
   const events = (sources.calendar?.rows || []).slice(0, 2);
   const focusWindow =
-    events.length >= 2
-      ? `Between your meetings`
-      : events.length === 1
-      ? `After your ${events[0].summary || "meeting"}`
-      : "Morning — no meetings found";
-
-  const failedCount = Object.values(sources).filter((v) => v.source_error).length;
+    events.length >= 2 ? "Between your meetings"
+    : events.length === 1 ? `After your ${events[0].summary || "meeting"}`
+    : "Morning - no meetings found";
 
   return {
-    urgent,
-    waiting_on_you,
-    best_focus_window: focusWindow,
-    summary: `${urgent.length} urgent item(s) and ${waiting_on_you.length} task(s) need attention. ${failedCount > 0 ? `${failedCount} source(s) failed to load.` : "All sources loaded successfully."}`,
+    situation: "Briefing generated without AI synthesis.",
+    beforeYouStart: urgent,
+    watchOut: [],
+    bestFocusWindow: focusWindow,
+    oneThing: waiting_on_you[0] || "Review your tasks for today.",
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Startup check
-// ─────────────────────────────────────────────────────────────────────────────
+// Startup validation
 function validateEnv() {
   const reqTokens = {
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    GMAIL_ACCESS_TOKEN: process.env.GMAIL_ACCESS_TOKEN,
+    OPENROUTER_API_KEY:           process.env.OPENROUTER_API_KEY,
+    GMAIL_ACCESS_TOKEN:           process.env.GMAIL_ACCESS_TOKEN,
     GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN,
-    NOTION_TOKEN: process.env.NOTION_TOKEN,
-    SLACK_TOKEN: process.env.SLACK_TOKEN
+    NOTION_TOKEN:                 process.env.NOTION_TOKEN,
+    SLACK_TOKEN:                  process.env.SLACK_TOKEN,
   };
-  
   console.log(`\n🔍 Environment Validation:`);
   for (const [key, val] of Object.entries(reqTokens)) {
-    if (val) {
-      console.log(`   [✓] ${key} is present`);
-    } else {
-      console.log(`   [!] ${key} is missing`);
-    }
+    console.log(`   [${val ? "✓" : "!"}] ${key} is ${val ? "present" : "missing"}`);
   }
 }
 
 validateEnv();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Start — with graceful EADDRINUSE handling
-// ─────────────────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
   console.log(`   MOCK_MODE:          ${MOCK_MODE}`);
   console.log(`   GITHUB_OWNER/REPO:  ${GITHUB_OWNER}/${GITHUB_REPO || "(not set)"}`);
-  console.log(`   OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? "set ✓" : "not set — using fallback briefing"}\n`);
+  console.log(`   OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? "set ✓" : "not set - using fallback briefing"}\n`);
 });
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`\n🔴 Port ${PORT} is already in use. Kill the other process first:\n   npx kill-port ${PORT}\nOr set a different port in .env (PORT=3002)\n`);
+    console.error(`\n🔴 Port ${PORT} is already in use.\n   npx kill-port ${PORT}\n`);
     process.exit(1);
   } else {
     throw err;
   }
 });
 
-// Graceful shutdown
 function shutdown(signal) {
-  console.log(`\n${signal} received — shutting down gracefully…`);
-  server.close(() => {
-    console.log("✓ Server closed");
-    process.exit(0);
-  });
+  console.log(`\n${signal} received - shutting down gracefully...`);
+  server.close(() => { console.log("✓ Server closed"); process.exit(0); });
   setTimeout(() => process.exit(1), 5000);
 }
 process.on("SIGTERM", () => shutdown("SIGTERM"));
