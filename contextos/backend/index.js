@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import { exec } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import OpenAI from "openai";
+import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleAuth } from "google-auth-library";
 import { parseCoralOutput } from "./coralParser.js";
 import {
   mockCalendarEvents,
@@ -21,7 +22,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: "../.env" });
 
 const app = express();
 app.use(cors());
@@ -33,40 +34,76 @@ const GITHUB_ENABLED = process.env.GITHUB_ENABLED === "true";
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
 
-const openRouter = process.env.OPENROUTER_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: "https://openrouter.ai/api/v1",
-      defaultHeaders: {
-        "HTTP-Referer": "http://localhost:5173",
-        "X-Title": "ContextOS",
-      },
-    })
-  : null;
+// ── Vertex AI setup ──────────────────────────────────────────────────────────
+const vertexAI = new VertexAI({
+  project: process.env.GCLOUD_PROJECT || "your-gcp-project-id",
+  location: process.env.GCLOUD_LOCATION || "us-central1",
+});
 
-// Build a credential env object from .env so Coral can bypass the Windows keychain.
+const geminiModel = vertexAI.getGenerativeModel({
+  model: "gemini-2.5-pro",
+});
+
+async function generateBriefing(systemPrompt, userContext) {
+  const request = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`,
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.4,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  const result = await geminiModel.generateContent(request);
+  const response = result.response;
+  const text = response.candidates[0].content.parts[0].text;
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("[vertex] Failed to parse JSON response:", text);
+    return {
+      situation: "Briefing generation failed - model returned malformed response.",
+      beforeYouStart: [],
+      watchOut: [],
+      bestFocusWindow: "Unable to determine.",
+      oneThing: "Check backend logs for Vertex AI errors.",
+    };
+  }
+}
+
+// ── Build Coral env (bypasses Windows keychain) ───────────────────────────────
 function buildCoralEnv() {
   return {
     ...process.env,
-    ...(process.env.GITHUB_TOKEN            && { GITHUB_TOKEN:                  process.env.GITHUB_TOKEN }),
-    ...(process.env.GMAIL_ACCESS_TOKEN      && { GMAIL_ACCESS_TOKEN:            process.env.GMAIL_ACCESS_TOKEN }),
+    ...(process.env.GITHUB_TOKEN                && { GITHUB_TOKEN:                  process.env.GITHUB_TOKEN }),
+    ...(process.env.GMAIL_ACCESS_TOKEN          && { GMAIL_ACCESS_TOKEN:            process.env.GMAIL_ACCESS_TOKEN }),
     ...(process.env.GOOGLE_CALENDAR_ACCESS_TOKEN && { GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN }),
-    ...(process.env.SLACK_TOKEN             && { SLACK_TOKEN:                   process.env.SLACK_TOKEN }),
-    ...(process.env.NOTION_TOKEN            && { NOTION_TOKEN:                  process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
-    ...(process.env.DISCORD_BOT_TOKEN       && { DISCORD_BOT_TOKEN:             process.env.DISCORD_BOT_TOKEN }),
+    ...(process.env.SLACK_TOKEN                 && { SLACK_TOKEN:                   process.env.SLACK_TOKEN }),
+    ...(process.env.NOTION_TOKEN                && { NOTION_TOKEN:                  process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
+    ...(process.env.DISCORD_BOT_TOKEN           && { DISCORD_BOT_TOKEN:             process.env.DISCORD_BOT_TOKEN }),
   };
 }
 
 function runCoralQuery(sql, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
-    const normalized = sql.replace(/\s+/g, ' ').trim().replace(/"/g, '\\"');
+    const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
     const env = buildCoralEnv();
     exec(
       `coral sql "${normalized}"`,
       { timeout: timeoutMs, env, shell: false },
       (err, stdout, stderr) => {
         if (err) {
-          if (err.killed || err.signal === 'SIGTERM') return reject(new Error('timeout'));
+          if (err.killed || err.signal === "SIGTERM") return reject(new Error("timeout"));
           return reject(new Error(stderr?.trim() || err.message));
         }
         resolve(stdout);
@@ -81,16 +118,16 @@ async function safeQuery(sql, label = "unknown") {
     const parsed = parseCoralOutput(stdout);
     return { ...parsed, source: label };
   } catch (err) {
-    if (err.message === 'timeout') {
+    if (err.message === "timeout") {
       console.warn(`[coral] ${label} failed: Query timed out`);
-      return { columns: [], rows: [], source: label, source_error: 'Query timed out', timedOut: true };
+      return { columns: [], rows: [], source: label, source_error: "Query timed out", timedOut: true };
     }
     console.warn(`[coral] ${label} failed:`, err.message);
     return { columns: [], rows: [], source: label, source_error: err.message };
   }
 }
 
-// POST /api/query
+// ── POST /api/query ───────────────────────────────────────────────────────────
 app.post("/api/query", async (req, res) => {
   const { sql } = req.body;
   if (!sql || typeof sql !== "string") {
@@ -111,7 +148,7 @@ app.post("/api/query", async (req, res) => {
   }
 });
 
-// GET /api/schema
+// ── GET /api/schema ───────────────────────────────────────────────────────────
 app.get("/api/schema", async (req, res) => {
   if (MOCK_MODE) {
     return res.json({
@@ -145,7 +182,7 @@ app.get("/api/schema", async (req, res) => {
   }
 });
 
-// GET /api/briefing
+// ── GET /api/briefing ─────────────────────────────────────────────────────────
 app.get("/api/briefing", async (req, res) => {
   let sources;
 
@@ -161,7 +198,7 @@ app.get("/api/briefing", async (req, res) => {
     };
   } else {
     const queries = {
-      calendar: `SELECT summary, start_date_time, end_date_time, start_date, end_date, status FROM google_calendar.events LIMIT 10`,
+      calendar:      `SELECT summary, start_date_time, end_date_time, start_date, end_date, status FROM google_calendar.events LIMIT 10`,
       github_issues: GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
         ? `SELECT number, title, state, created_at, updated_at, comments FROM github.issues WHERE owner = '${GITHUB_OWNER}' AND repo = '${GITHUB_REPO}' AND state = 'open' ORDER BY updated_at DESC LIMIT 10`
         : null,
@@ -216,94 +253,90 @@ app.get("/api/briefing", async (req, res) => {
     .filter(([, v]) => v.source_error)
     .map(([k]) => k);
 
+  // ── Synthesis ──────────────────────────────────────────────────────────────
   let briefing = MOCK_MODE ? mockBriefing : null;
 
-  if (!MOCK_MODE && openRouter) {
-    try {
-      const now     = new Date();
-      const todayStr = now.toISOString().split("T")[0];
+  if (!MOCK_MODE) {
+    const now      = new Date();
+    const todayStr = now.toISOString().split("T")[0];
 
-      const calRows      = sources.calendar?.rows       || [];
-      const slackRows    = sources.slack_channels?.rows  || [];
-      const gmailInbox   = sources.gmail_inbox?.rows    || [];
-      const gmailProfile = sources.gmail_profile?.rows?.[0] || {};
-      const notionRows   = sources.notion_search?.rows  || [];
-      const discordRows  = sources.discord?.rows        || [];
+    const calRows      = sources.calendar?.rows       || [];
+    const slackRows    = sources.slack_channels?.rows  || [];
+    const gmailInbox   = sources.gmail_inbox?.rows    || [];
+    const gmailProfile = sources.gmail_profile?.rows?.[0] || {};
+    const notionRows   = sources.notion_search?.rows  || [];
+    const discordRows  = sources.discord?.rows        || [];
 
-      // Derived signals
-      const todayEvents = calRows
-        .map(r => ({
-          summary: r.summary,
-          start: new Date((r.start_date_time || r.start_date || "").replace(/Z$/, "")),
-          end:   new Date((r.end_date_time   || r.end_date   || "").replace(/Z$/, "")),
-        }))
-        .filter(e => !isNaN(e.start) && e.start.toISOString().startsWith(todayStr))
-        .sort((a, b) => a.start - b.start);
+    // Derived signals
+    const todayEvents = calRows
+      .map(r => ({
+        summary: r.summary,
+        start: new Date((r.start_date_time || r.start_date || "").replace(/Z$/, "")),
+        end:   new Date((r.end_date_time   || r.end_date   || "").replace(/Z$/, "")),
+      }))
+      .filter(e => !isNaN(e.start) && e.start.toISOString().startsWith(todayStr))
+      .sort((a, b) => a.start - b.start);
 
-      const minutesUntilFirstMeeting = todayEvents.length > 0
-        ? Math.round((todayEvents[0].start - now) / 60000)
-        : null;
+    const minutesUntilFirstMeeting = todayEvents.length > 0
+      ? Math.round((todayEvents[0].start - now) / 60000)
+      : null;
 
-      const totalMeetingMinutesToday = todayEvents.reduce(
-        (sum, e) => sum + Math.max(0, Math.round((e.end - e.start) / 60000)), 0
-      );
+    const totalMeetingMinutesToday = todayEvents.reduce(
+      (sum, e) => sum + Math.max(0, Math.round((e.end - e.start) / 60000)), 0
+    );
 
-      let longestFreeBlockMinutes = 0;
-      for (let i = 1; i < todayEvents.length; i++) {
-        const gap = Math.round((todayEvents[i].start - todayEvents[i - 1].end) / 60000);
-        if (gap > longestFreeBlockMinutes) longestFreeBlockMinutes = gap;
-      }
+    let longestFreeBlockMinutes = 0;
+    for (let i = 1; i < todayEvents.length; i++) {
+      const gap = Math.round((todayEvents[i].start - todayEvents[i - 1].end) / 60000);
+      if (gap > longestFreeBlockMinutes) longestFreeBlockMinutes = gap;
+    }
 
-      const backToBackCount = todayEvents.filter((e, i) => {
-        if (i === 0) return false;
-        return (e.start - todayEvents[i - 1].end) < 10 * 60 * 1000;
-      }).length;
+    const backToBackCount = todayEvents.filter((e, i) => {
+      if (i === 0) return false;
+      return (e.start - todayEvents[i - 1].end) < 10 * 60 * 1000;
+    }).length;
 
-      const threeDaysAgo = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
-      const overdueNotionTasks = notionRows.filter(t => {
-        const due = t.due_date;
-        return due && due <= todayStr && (t.status || "").toLowerCase() !== "done";
-      });
-      const staleTasks = notionRows.filter(t => {
-        const edited = t.last_edited_time || t.updated_at;
-        return edited && edited < threeDaysAgo;
-      });
+    const threeDaysAgo = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const overdueNotionTasks = notionRows.filter(t => {
+      const due = t.due_date;
+      return due && due <= todayStr && (t.status || "").toLowerCase() !== "done";
+    });
+    const staleTasks = notionRows.filter(t => {
+      const edited = t.last_edited_time || t.updated_at;
+      return edited && edited < threeDaysAgo;
+    });
 
-      const derived = {
-        minutesUntilFirstMeeting,
-        totalMeetingMinutesToday,
-        longestFreeBlockMinutes,
-        hasBackToBackMeetings: backToBackCount > 0,
-        backToBackCount,
-        overdueNotionTaskCount: overdueNotionTasks.length,
-        staleTaskCount: staleTasks.length,
-        firstMeetingTitle: todayEvents[0]?.summary || null,
-        firstMeetingTime: todayEvents[0]?.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) || null,
-      };
+    const derived = {
+      minutesUntilFirstMeeting,
+      totalMeetingMinutesToday,
+      longestFreeBlockMinutes,
+      hasBackToBackMeetings: backToBackCount > 0,
+      backToBackCount,
+      overdueNotionTaskCount: overdueNotionTasks.length,
+      staleTaskCount:         staleTasks.length,
+      firstMeetingTitle:      todayEvents[0]?.summary || null,
+      firstMeetingTime:       todayEvents[0]?.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) || null,
+    };
 
-      // Cross-source context
-      const context = {
-        current_time: now.toISOString(),
-        derived,
-        calendar_events: todayEvents.map(e => ({
-          summary: e.summary,
-          start: e.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-          end:   e.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        })),
-        gmail: {
-          inbox_count: gmailInbox.length,
-          total_messages: gmailProfile.messages_total,
-        },
-        slack_channels: slackRows.slice(0, 5).map(r => ({ name: r.name, members: r.num_members, topic: r.topic || null })),
-        notion_tasks: notionRows.slice(0, 8).map(r => ({ title: r.title || r.name, status: r.status, last_edited: r.last_edited_time })),
-        urgent_notion_tasks: overdueNotionTasks.map(t => ({ title: t.title || t.name, due: t.due_date })),
-        stale_tasks: staleTasks.slice(0, 3).map(t => ({ title: t.title || t.name, last_edited: t.last_edited_time })),
-        discord: discordRows.slice(0, 10).map(r => ({ author: r.author__username, content: r.content, timestamp: r.timestamp })),
-      };
+    const context = {
+      current_time:     now.toISOString(),
+      derived,
+      calendar_events:  todayEvents.map(e => ({
+        summary: e.summary,
+        start:   e.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+        end:     e.end.toLocaleTimeString("en-US",   { hour: "numeric", minute: "2-digit" }),
+      })),
+      gmail:            { inbox_count: gmailInbox.length, total_messages: gmailProfile.messages_total },
+      slack_channels:   slackRows.slice(0, 5).map(r => ({ name: r.name, members: r.num_members, topic: r.topic || null })),
+      notion_tasks:     notionRows.slice(0, 8).map(r => ({ title: r.title || r.name, status: r.status, last_edited: r.last_edited_time })),
+      urgent_notion_tasks: overdueNotionTasks.map(t => ({ title: t.title || t.name, due: t.due_date })),
+      stale_tasks:      staleTasks.slice(0, 3).map(t => ({ title: t.title || t.name, last_edited: t.last_edited_time })),
+      discord:          discordRows.slice(0, 10).map(r => ({ author: r.author__username, content: r.content, timestamp: r.timestamp })),
+    };
 
-      const sourcesWithData = [calRows, slackRows, gmailInbox, notionRows, discordRows].filter(s => s.length > 0).length;
+    const sourcesWithData = [calRows, slackRows, gmailInbox, notionRows, discordRows].filter(s => s.length > 0).length;
 
-      const systemPrompt = `You are a chief of staff with full visibility into this person's calendar, inbox, tasks, and team communications.
+    const systemPrompt = `You are a chief of staff with full visibility into this person's calendar, inbox, tasks, and team communications.
 
 Your job is NOT to summarize each tool separately. You must reason across all sources together and surface only what actually matters.
 
@@ -325,55 +358,35 @@ Rules:
 - Be direct, specific, and use names and times from the actual data
 - If a section has nothing worth flagging, write "Clear." as the value
 - ${sourcesWithData < 2 ? "Fewer than 2 sources have data - generate reasonable defaults for every section based on the current time of day." : ""}
-- Return ONLY valid JSON with exactly these keys: situation, beforeYouStart, watchOut, bestFocusWindow, oneThing
-- beforeYouStart and watchOut must be arrays of strings. All other values are strings.
-- Never use markdown fences. Raw JSON only.`;
+- Return valid JSON with exactly these keys: situation, beforeYouStart, watchOut, bestFocusWindow, oneThing
+- beforeYouStart and watchOut must be arrays of strings. All other values are strings.`;
 
-      const completion = await openRouter.chat.completions.create({
-        model: "meta-llama/llama-3.3-70b-instruct",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Workflow data as of ${now.toLocaleString()}:\n${JSON.stringify(context, null, 2)}\n\nGenerate my Morning Briefing JSON.` }
-        ],
-        max_tokens: 1000
-      });
-
-      let content = completion.choices[0].message.content.trim();
-      if (content.startsWith("```")) {
-        content = content.replace(/^```(?:json)?\n/, "").replace(/\n```$/, "").trim();
+    try {
+      briefing = await generateBriefing(systemPrompt, context);
+    } catch (e) {
+      if (e.message?.includes("403")) {
+        console.error("[vertex] Permission denied - ensure Vertex AI API is enabled:");
+        console.error("[vertex] Run in PowerShell: gcloud services enable aiplatform.googleapis.com");
+      } else if (e.message?.includes("429")) {
+        console.error("[vertex] Quota exceeded - check your Vertex AI quota in GCP console");
+      } else {
+        console.error("[vertex] Unexpected error:", e.message);
       }
-      try {
-        briefing = JSON.parse(content);
-      } catch (parseErr) {
-        console.error("[openrouter] failed to parse JSON response:", parseErr.message);
-        briefing = {
-          situation: "Unable to compute - AI returned malformed data.",
-          beforeYouStart: [],
-          watchOut: [],
-          bestFocusWindow: "Try again in a moment.",
-          oneThing: "Retry the briefing.",
-          synthesis_error: "JSON Parse Error",
-        };
-      }
-    } catch (err) {
-      console.error("[openrouter] briefing synthesis failed:", err.message);
       briefing = {
-        situation: "Briefing synthesis failed: " + err.message,
+        situation: "Briefing generation failed - check backend logs.",
         beforeYouStart: [],
         watchOut: [],
-        bestFocusWindow: "Unable to compute - OpenRouter API error.",
-        oneThing: "Check your OpenRouter API key and retry.",
-        synthesis_error: err.message,
+        bestFocusWindow: "Unable to compute - Vertex AI error.",
+        oneThing: "Check backend logs for Vertex AI errors.",
+        synthesis_error: e.message,
       };
     }
-  } else if (!MOCK_MODE && !openRouter) {
-    briefing = buildFallbackBriefing(sources);
   }
 
   res.json({ briefing, sources, failed_sources });
 });
 
-// GET /api/focus-debt
+// ── GET /api/focus-debt ───────────────────────────────────────────────────────
 app.get("/api/focus-debt", async (req, res) => {
   if (MOCK_MODE) return res.json(mockFocusDebt);
 
@@ -387,8 +400,7 @@ app.get("/api/focus-debt", async (req, res) => {
       : Promise.resolve({ rows: [], columns: [], source: "github", status: "disabled" }),
   ]);
 
-  let planned = 0;
-  let completed = 0;
+  let planned = 0, completed = 0;
   for (const row of notionResult.rows) {
     planned++;
     const status = (row.status || row.object || "").toLowerCase();
@@ -405,17 +417,16 @@ app.get("/api/focus-debt", async (req, res) => {
   }
 
   res.json({
-    planned,
-    completed,
+    planned, completed,
     byDay: Object.values(dayMap).slice(-7),
     failed_sources: [
-      notionResult.source_error ? "notion" : null,
-      githubResult.source_error ? "github" : null,
+      notionResult.source_error  ? "notion" : null,
+      githubResult.source_error  ? "github" : null,
     ].filter(Boolean),
   });
 });
 
-// GET /api/unfinished-loops
+// ── GET /api/unfinished-loops ─────────────────────────────────────────────────
 app.get("/api/unfinished-loops", async (req, res) => {
   if (MOCK_MODE) return res.json(mockUnfinishedLoops);
 
@@ -430,24 +441,21 @@ app.get("/api/unfinished-loops", async (req, res) => {
   ]);
 
   const loops = [
-    ...githubResult.rows.map((r) => ({
-      item: `#${r.number} - ${r.title}`,
-      source: "github",
-      touches: parseInt(r.comments, 10) || 0,
+    ...githubResult.rows.map(r => ({
+      item:         `#${r.number} - ${r.title}`,
+      source:       "github",
+      touches:      parseInt(r.comments, 10) || 0,
       last_touched: r.updated_at,
-      description: `GitHub issue with ${r.comments} comments, still open`,
+      description:  `GitHub issue with ${r.comments} comments, still open`,
     })),
     ...notionResult.rows
-      .filter((r) => {
-        const s = (r.status || "").toLowerCase();
-        return s.includes("progress") || s.includes("doing");
-      })
-      .map((r) => ({
-        item: r.title || r.name || "(Untitled)",
-        source: "notion",
-        touches: 3,
+      .filter(r => { const s = (r.status || "").toLowerCase(); return s.includes("progress") || s.includes("doing"); })
+      .map(r => ({
+        item:         r.title || r.name || "(Untitled)",
+        source:       "notion",
+        touches:      3,
         last_touched: r.last_edited_time || r.updated_at,
-        description: `Status: "${r.status}" - stuck in progress`,
+        description:  `Status: "${r.status}" - stuck in progress`,
       })),
   ];
 
@@ -460,7 +468,7 @@ app.get("/api/unfinished-loops", async (req, res) => {
   });
 });
 
-// GET /api/sources
+// ── GET /api/sources ──────────────────────────────────────────────────────────
 app.get("/api/sources", async (req, res) => {
   if (MOCK_MODE) return res.json(mockSources);
 
@@ -471,86 +479,97 @@ app.get("/api/sources", async (req, res) => {
       10_000
     );
     const { rows } = parseCoralOutput(stdout);
-    const connectedMap = Object.fromEntries(rows.map((r) => [r.schema_name, r.table_count]));
-    const sources = KNOWN.map((name) => ({
+    const connectedMap = Object.fromEntries(rows.map(r => [r.schema_name, r.table_count]));
+    return res.json(KNOWN.map(name => ({
       name,
-      connected: name in connectedMap,
+      connected:   name in connectedMap,
       rows_cached: connectedMap[name] ? parseInt(connectedMap[name], 10) : null,
-    }));
-    return res.json(sources);
+    })));
   } catch (err) {
-    return res.json(
-      KNOWN.map((name) => ({ name, connected: false, rows_cached: null, error: err.message }))
-    );
+    return res.json(KNOWN.map(name => ({ name, connected: false, rows_cached: null, error: err.message })));
   }
 });
 
-// GET /api/health
+// ── GET /api/health ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({
-    status: "ok",
-    mock_mode: MOCK_MODE,
-    github_owner: GITHUB_OWNER || null,
-    github_repo: GITHUB_REPO || null,
-    openrouter_key: !!process.env.OPENROUTER_API_KEY,
-    timestamp: new Date().toISOString(),
+    status:        "ok",
+    mock_mode:     MOCK_MODE,
+    github_owner:  GITHUB_OWNER || null,
+    github_repo:   GITHUB_REPO || null,
+    gcloud_project: process.env.GCLOUD_PROJECT || null,
+    timestamp:     new Date().toISOString(),
   });
 });
 
-// Fallback briefing builder (no OpenRouter key)
+// ── Fallback briefing (Vertex unavailable) ─────────────────────────────────
 function buildFallbackBriefing(sources) {
-  const urgent = [];
-  const waiting_on_you = [];
-
+  const beforeYouStart = [];
   for (const pr of (sources.github_pulls?.rows || []).slice(0, 2)) {
-    urgent.push(`PR #${pr.number}: ${pr.title} (last updated ${pr.updated_at})`);
+    beforeYouStart.push(`Review PR #${pr.number}: ${pr.title}`);
   }
-  for (const task of (sources.notion_search?.rows || []).slice(0, 3)) {
-    waiting_on_you.push(task.title || task.name || "(untitled task)");
-  }
-
   const events = (sources.calendar?.rows || []).slice(0, 2);
-  const focusWindow =
-    events.length >= 2 ? "Between your meetings"
+  const focusWindow = events.length >= 2 ? "Between your meetings"
     : events.length === 1 ? `After your ${events[0].summary || "meeting"}`
     : "Morning - no meetings found";
+  const firstTask = (sources.notion_search?.rows || [])[0];
 
   return {
-    situation: "Briefing generated without AI synthesis.",
-    beforeYouStart: urgent,
-    watchOut: [],
+    situation:      "Briefing generated without AI synthesis.",
+    beforeYouStart,
+    watchOut:       [],
     bestFocusWindow: focusWindow,
-    oneThing: waiting_on_you[0] || "Review your tasks for today.",
+    oneThing:       firstTask ? (firstTask.title || firstTask.name || "Review your tasks") : "Plan your day.",
   };
 }
 
-// Startup validation
+// ── Startup validation ─────────────────────────────────────────────────────
 function validateEnv() {
-  const reqTokens = {
-    OPENROUTER_API_KEY:           process.env.OPENROUTER_API_KEY,
+  const tokens = {
     GMAIL_ACCESS_TOKEN:           process.env.GMAIL_ACCESS_TOKEN,
     GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN,
     NOTION_TOKEN:                 process.env.NOTION_TOKEN,
     SLACK_TOKEN:                  process.env.SLACK_TOKEN,
   };
   console.log(`\n🔍 Environment Validation:`);
-  for (const [key, val] of Object.entries(reqTokens)) {
+  for (const [key, val] of Object.entries(tokens)) {
     console.log(`   [${val ? "✓" : "!"}] ${key} is ${val ? "present" : "missing"}`);
+  }
+  if (!process.env.GCLOUD_PROJECT) {
+    console.warn("[env] WARNING: GCLOUD_PROJECT not set - Vertex AI calls will fail");
+  }
+  if (!process.env.GCLOUD_LOCATION) {
+    console.warn("[env] WARNING: GCLOUD_LOCATION not set - defaulting to us-central1");
+    process.env.GCLOUD_LOCATION = "us-central1";
+  }
+}
+
+async function checkADC() {
+  try {
+    const auth   = new GoogleAuth();
+    const client = await auth.getClient();
+    const token  = await client.getAccessToken();
+    if (token) console.log("[gcloud] ADC credentials valid ✓");
+  } catch (e) {
+    console.error("[gcloud] ADC credentials not found");
+    console.error("[gcloud] Run in PowerShell: gcloud auth application-default login");
   }
 }
 
 validateEnv();
+checkADC();
 
+// ── Server ────────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
-  console.log(`   MOCK_MODE:          ${MOCK_MODE}`);
-  console.log(`   GITHUB_OWNER/REPO:  ${GITHUB_OWNER}/${GITHUB_REPO || "(not set)"}`);
-  console.log(`   OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? "set ✓" : "not set - using fallback briefing"}\n`);
+  console.log(`   MOCK_MODE:     ${MOCK_MODE}`);
+  console.log(`   GCLOUD_PROJECT: ${process.env.GCLOUD_PROJECT || "(not set)"}`);
+  console.log(`   GCLOUD_LOCATION: ${process.env.GCLOUD_LOCATION || "us-central1"}\n`);
 });
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`\n🔴 Port ${PORT} is already in use.\n   npx kill-port ${PORT}\n`);
+    console.error(`\n🔴 Port ${PORT} is already in use.\n   Run: npx kill-port ${PORT}\n`);
     process.exit(1);
   } else {
     throw err;
