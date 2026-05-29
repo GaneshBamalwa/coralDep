@@ -61,7 +61,7 @@ function buildCoralEnv() {
     // Slack
     ...(process.env.SLACK_TOKEN    && { SLACK_TOKEN:    process.env.SLACK_TOKEN }),
     // Notion
-    ...(process.env.NOTION_TOKEN   && { NOTION_TOKEN:   process.env.NOTION_TOKEN }),
+    ...(process.env.NOTION_TOKEN   && { NOTION_TOKEN:   process.env.NOTION_TOKEN, NOTION_API_KEY: process.env.NOTION_TOKEN }),
   };
 }
 

@@ -40,8 +40,10 @@ function BriefingSkeleton() {
 
 // ── Calendar mini-event ────────────────────────────────────────────────────
 function CalendarEvent({ event }) {
-  const start = new Date(event.start);
-  const end = new Date(event.end);
+  const rawStart = event.start_date_time || event.start_date || event.start;
+  const rawEnd = event.end_date_time || event.end_date || event.end;
+  const start = new Date(typeof rawStart === 'string' ? rawStart.replace(/Z$/, '') : rawStart);
+  const end = new Date(typeof rawEnd === 'string' ? rawEnd.replace(/Z$/, '') : rawEnd);
   const fmt = (d) =>
     d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return (
