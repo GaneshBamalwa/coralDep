@@ -144,3 +144,47 @@ export function useCoralSchema() {
 
   return { schema, loading, error, fetchSchema };
 }
+
+/**
+ * useChat — POST /api/chat hook for the Chief of Staff conversation panel.
+ * Manages conversation history and loading state.
+ */
+export function useChat() {
+  const [history, setHistory]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error,   setError]     = useState(null);
+
+  const sendMessage = useCallback(async (message, context = {}) => {
+    setLoading(true);
+    setError(null);
+
+    const nextHistory = [...history, { role: "user", content: message }];
+    setHistory(nextHistory);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ message, context, history }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+
+      setHistory([...nextHistory, { role: "model", content: json.reply }]);
+      return json.reply;
+    } catch (err) {
+      setError(err.message);
+      // Remove the optimistically-added user message on failure
+      setHistory(history);
+    } finally {
+      setLoading(false);
+    }
+  }, [history]);
+
+  const reset = useCallback(() => {
+    setHistory([]);
+    setError(null);
+  }, []);
+
+  return { history, loading, error, sendMessage, reset };
+}

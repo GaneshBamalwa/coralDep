@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { VertexAI } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
 import { parseCoralOutput } from "./coralParser.js";
+import { detectSignals } from "./signals.js";
 import {
   mockCalendarEvents,
   mockGithubPRs,
@@ -387,7 +388,10 @@ Rules:
     }
   }
 
-  res.json({ briefing, sources, failed_sources });
+  // ── Signal detection (runs on already-fetched data, no new Coral queries) ──
+  const signals = detectSignals(sources);
+
+  res.json({ briefing, signals, sources, failed_sources });
 });
 
 // ── GET /api/focus-debt ───────────────────────────────────────────────────────
@@ -497,13 +501,49 @@ app.get("/api/sources", async (req, res) => {
 // ── GET /api/health ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({
-    status:        "ok",
-    mock_mode:     MOCK_MODE,
-    github_owner:  GITHUB_OWNER || null,
-    github_repo:   GITHUB_REPO || null,
+    status:         "ok",
+    mock_mode:      MOCK_MODE,
+    github_owner:   GITHUB_OWNER || null,
+    github_repo:    GITHUB_REPO  || null,
     gcloud_project: process.env.GCLOUD_PROJECT || null,
-    timestamp:     new Date().toISOString(),
+    timestamp:      new Date().toISOString(),
   });
+});
+
+// ── POST /api/chat ────────────────────────────────────────────────────────────
+app.post("/api/chat", async (req, res) => {
+  const { message, context = {}, history = [] } = req.body;
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "message field is required" });
+  }
+
+  const systemPrompt = `You are a smart Chief of Staff. The user has already seen their morning briefing.
+Help them act on it. Be concise, direct, and specific. Never re-summarise what they already know.
+If context data is provided, use it — name specific meetings, tasks, people, and times.
+Keep replies under 150 words unless the user explicitly asks for something longer.`;
+
+  const contextBlock = Object.keys(context).length > 0
+    ? `\n\nRelevant context:\n${JSON.stringify(context, null, 2)}`
+    : "";
+
+  const contents = [
+    ...history.map((h) => ({ role: h.role, parts: [{ text: h.content }] })),
+    { role: "user", parts: [{ text: message + contextBlock }] },
+  ];
+
+  try {
+    const request = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
+    };
+    const result = await geminiModel.generateContent(request);
+    const reply  = result.response.candidates[0].content.parts[0].text;
+    return res.json({ reply: reply.trim() });
+  } catch (e) {
+    console.error("[chat] LLM error:", e.message);
+    return res.status(500).json({ error: e.message });
+  }
 });
 
 // ── Fallback briefing (Vertex unavailable) ─────────────────────────────────
