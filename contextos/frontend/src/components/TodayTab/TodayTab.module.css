@@ -1,0 +1,329 @@
+/* TodayTab.module.css */
+
+.root {
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 48px;
+}
+
+/* Greeting banner */
+.greetingCard {
+  border-radius: 10px;
+  border: 1px solid #1e1e32;
+  background: #0f0f1a;
+  padding: 14px 16px;
+}
+
+.greetingTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.greetingName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.greetingMeta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #475569;
+}
+
+.focusScore {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #10b981;
+  background: #10b98112;
+  border: 1px solid #10b98122;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.divider {
+  height: 1px;
+  background: #1e1e32;
+  margin: 10px 0;
+}
+
+/* Signal rows */
+.signalRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.signalIcon {
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.signalLabel {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #475569;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.signalValue {
+  flex: 1;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 3-column grid */
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.col {
+  border-radius: 10px;
+  border: 1px solid #1e1e32;
+  background: #0a0a14;
+  overflow: hidden;
+}
+
+.colHeader {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e1e32;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.colTitle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex: 1;
+}
+
+.colBadge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #ef444415;
+  color: #ef4444;
+  border: 1px solid #ef444430;
+}
+
+.colList {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+/* Queue items */
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #1e1e3240;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.queueItem:last-child { border-bottom: none; }
+
+.urgencyDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.queueLabel {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.queueAge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: #2d3748;
+  flex-shrink: 0;
+}
+
+.queueAction {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid #1e1e32;
+  background: none;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.queueAction:hover { color: #00d4ff; border-color: #00d4ff33; }
+
+/* Calendar list */
+.calItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #1e1e3240;
+  font-size: 11px;
+}
+
+.calItem:last-child { border-bottom: none; }
+
+.calTime {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #00d4ff;
+  width: 42px;
+  flex-shrink: 0;
+}
+
+.calSummary {
+  flex: 1;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calDuration {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: #2d3748;
+}
+
+/* Workday banner */
+.nowBanner {
+  border-radius: 10px;
+  border: 1px solid #00d4ff28;
+  background: #00d4ff0a;
+  padding: 12px 16px;
+}
+
+.nowLabel {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.nowTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.nextLabel {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+/* Evening retrospective */
+.retroSection {
+  border-radius: 10px;
+  border: 1px solid #1e1e32;
+  background: #0a0a14;
+  padding: 14px 16px;
+}
+
+.retroTitle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.retroItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e1e3240;
+}
+
+.retroItem:last-child { border-bottom: none; }
+
+.exportBtn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f022;
+  background: #1e1e32;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.exportBtn:hover {
+  border-color: #10b98144;
+  color: #10b981;
+}
+
+.exportMsg {
+  font-size: 11px;
+  color: #475569;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Empty / loading */
+.empty {
+  font-size: 11px;
+  color: #2d3748;
+  padding: 8px 12px;
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.skeleton {
+  height: 36px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0f0f1a 0%, #1e1e32 50%, #0f0f1a 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.8s infinite linear;
+  margin: 4px 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+@media (max-width: 900px) {
+  .grid3 { grid-template-columns: 1fr; }
+}

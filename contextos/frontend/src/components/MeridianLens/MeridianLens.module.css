@@ -1,0 +1,236 @@
+/* MeridianLens.module.css */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.palette {
+  width: 600px;
+  max-width: calc(100vw - 32px);
+  background: #0a0a14;
+  border: 1px solid #1e1e32;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px #00d4ff11;
+  overflow: hidden;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e1e32;
+}
+
+.headerIcon {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: #00d4ff;
+  font-weight: 700;
+}
+
+.headerTitle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  flex: 1;
+}
+
+.escHint {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #475569;
+  background: #1e1e32;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.suggestions {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e1e32;
+}
+
+.suggestionsLabel {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+}
+
+.suggestionItem:hover {
+  background: #151524;
+}
+
+.suggIcon {
+  font-size: 12px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  color: #475569;
+}
+
+.suggLabel {
+  font-size: 12px;
+  color: #94a3b8;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggResult {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #0f0f1a;
+  font-size: 11px;
+  color: #94a3b8;
+  border: 1px solid #1e1e32;
+}
+
+.inputArea {
+  padding: 10px 16px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #151524;
+  border: 1px solid #1e1e32;
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: border-color 0.15s;
+}
+
+.inputRow:focus-within {
+  border-color: #00d4ff44;
+}
+
+.inputCaret {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: #00d4ff;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #e2e8f0;
+  font-family: "Inter", sans-serif;
+}
+
+.input::placeholder {
+  color: #2d3748;
+}
+
+.response {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0a0a14;
+  border: 1px solid #1e1e32;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.responseText {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.responseList {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.8;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.responseList li::before {
+  content: "• ";
+  color: #00d4ff;
+}
+
+.responseAction {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #00d4ff33;
+  background: #00d4ff12;
+  color: #00d4ff;
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.responseCode {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.thinking {
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.skeleton {
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #151524 0%, #1e1e32 50%, #151524 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite linear;
+  margin-bottom: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}

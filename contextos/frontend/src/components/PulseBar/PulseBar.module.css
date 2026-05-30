@@ -1,0 +1,134 @@
+/* PulseBar.module.css — transitions that Tailwind can't express inline */
+
+.bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: rgba(6, 6, 16, 0.92);
+  border-top: 1px solid #1e1e32;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  user-select: none;
+}
+
+.bar:hover {
+  background: rgba(10, 10, 24, 0.96);
+  border-top-color: #00d4ff22;
+}
+
+.sentence {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.7);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.4s ease;
+}
+
+.sentenceVisible  { opacity: 1; }
+.sentenceHidden   { opacity: 0; }
+
+.icon {
+  color: #00d4ff;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.hint {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: rgba(71, 85, 105, 0.6);
+  flex-shrink: 0;
+}
+
+/* Drawer — slides up from above the bar */
+.drawerWrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 32px;
+  height: 240px;
+  z-index: 49;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(8, 8, 20, 0.97);
+  border-top: 1px solid #1e1e32;
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 12px;
+  gap: 12px;
+}
+
+.drawerOpen {
+  transform: translateY(0);
+}
+
+.drawerTitle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  margin: 0;
+}
+
+.elaborationText {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #1e1e32;
+  background: #0f0f1a;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.actionBtn:hover {
+  border-color: #00d4ff33;
+  color: #00d4ff;
+}
+
+.nextBtn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #00d4ff33;
+  background: #00d4ff12;
+  color: #00d4ff;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.thinking {
+  color: rgba(71, 85, 105, 0.8);
+  font-size: 12px;
+  font-style: italic;
+}

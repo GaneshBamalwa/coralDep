@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Sun, GitBranch, RefreshCcw, AlignLeft, Terminal, Cpu,
+  Sun, GitBranch, RefreshCcw, AlignLeft, Terminal, Cpu, CalendarDays,
 } from "lucide-react";
 
 import MorningBriefing  from "./components/MorningBriefing";
@@ -9,11 +9,18 @@ import UnfinishedLoops  from "./components/UnfinishedLoops";
 import ContextTimeline  from "./components/ContextTimeline";
 import QueryConsole     from "./components/QueryConsole";
 import SourceStatus     from "./components/SourceStatus";
+import TodayTab         from "./components/TodayTab/TodayTab";
+import SignalStream     from "./components/SignalStream/SignalStream";
+import MeridianLens     from "./components/MeridianLens/MeridianLens";
+import PulseBar         from "./components/PulseBar/PulseBar";
 import { ErrorBoundary }  from "./components/ErrorBoundary";
+import { SignalsProvider } from "./contexts/SignalsContext";
+import { useLens }        from "./hooks/useLens";
 
 // ── Nav items ──────────────────────────────────────────────────────────────
 const NAV = [
   { id: "briefing",  label: "Briefing",  icon: Sun },
+  { id: "today_tab", label: "TODAY",     icon: CalendarDays },
   { id: "today",     label: "Focus",     icon: RefreshCcw },
   { id: "loops",     label: "Loops",     icon: GitBranch },
   { id: "timeline",  label: "Timeline",  icon: AlignLeft },
@@ -39,7 +46,7 @@ function Logo() {
           ContextOS
         </div>
         <div className="font-mono text-[9px] text-[#475569] mt-0.5 tracking-widest uppercase">
-          Intelligence
+          Meridian
         </div>
       </div>
     </div>
@@ -55,7 +62,6 @@ function Sidebar({ active, onChange }) {
     >
       <Logo />
 
-      {/* Nav */}
       <nav className="flex flex-col gap-0.5 px-2 flex-1">
         {NAV.map(({ id, label, icon: Icon }) => (
           <button
@@ -70,7 +76,6 @@ function Sidebar({ active, onChange }) {
         ))}
       </nav>
 
-      {/* Source Status */}
       <div className="pb-4 pt-2 border-t border-[#1e1e32] mt-4">
         <SourceStatus />
       </div>
@@ -83,22 +88,26 @@ function MainPanel({ active }) {
   let content;
   switch (active) {
     case "briefing":  content = <MorningBriefing />; break;
-    case "today":     content = <FocusDebt />; break;
+    case "today_tab": content = <TodayTab />;        break;
+    case "today":     content = <FocusDebt />;       break;
     case "loops":     content = <UnfinishedLoops />; break;
     case "timeline":  content = <ContextTimeline />; break;
-    case "console":   content = <QueryConsole />; break;
-    default:          content = <FocusDebt />; break;
+    case "console":   content = <QueryConsole />;    break;
+    default:          content = <FocusDebt />;       break;
   }
   return <ErrorBoundary key={active}>{content}</ErrorBoundary>;
 }
 
-// ── Right Panel — always-visible briefing ─────────────────────────────────
+// ── Right Panel — Signal Stream (top 40%) + Briefing (bottom 60%) ──────────
 function RightPanel() {
   return (
     <aside
-      className="flex flex-col shrink-0 border-l border-[#1e1e32] overflow-hidden"
+      className="hidden md:flex flex-col shrink-0 border-l border-[#1e1e32] overflow-hidden"
       style={{ width: 280, background: "#08080e" }}
     >
+      <ErrorBoundary>
+        <SignalStream />
+      </ErrorBoundary>
       <ErrorBoundary>
         <MorningBriefing />
       </ErrorBoundary>
@@ -121,8 +130,12 @@ function Header({ active }) {
         {item?.label ?? "Dashboard"}
       </h1>
       <div className="flex-1" />
-      {/* Live indicator */}
-      <div className="flex items-center gap-2">
+      {/* Cmd+K hint */}
+      <span className="hidden sm:flex items-center gap-1.5 font-mono text-[10px] text-[#2d3748]">
+        <kbd className="bg-[#1e1e32] px-1.5 py-0.5 rounded text-[9px]">⌘K</kbd>
+        lens
+      </span>
+      <div className="flex items-center gap-2 ml-3">
         <span className="dot-pulse bg-[#10b981] w-[6px] h-[6px] rounded-full" />
         <span className="font-mono text-[10px] text-[#475569]">LIVE</span>
       </div>
@@ -133,22 +146,36 @@ function Header({ active }) {
 // ── Root App ───────────────────────────────────────────────────────────────
 export default function App() {
   const [activePanel, setActivePanel] = useState("briefing");
+  const { isOpen: lensOpen, close: closeLen } = useLens();
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0a0a0f" }}>
-      {/* Left Sidebar */}
-      <Sidebar active={activePanel} onChange={setActivePanel} />
+    <SignalsProvider>
+      {/* Main layout — pb-8 reserves space for the 32px PulseBar */}
+      <div className="flex h-screen overflow-hidden pb-8" style={{ background: "#0a0a0f" }}>
+        {/* Left Sidebar */}
+        <Sidebar active={activePanel} onChange={setActivePanel} />
 
-      {/* Main Content */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header active={activePanel} />
-        <main className="flex-1 overflow-y-auto">
-          <MainPanel active={activePanel} />
-        </main>
+        {/* Main Content */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Header active={activePanel} />
+          <main className="flex-1 overflow-y-auto">
+            <MainPanel active={activePanel} />
+          </main>
+        </div>
+
+        {/* Right Panel */}
+        <RightPanel />
       </div>
 
-      {/* Right Panel */}
-      <RightPanel />
-    </div>
+      {/* Meridian Lens — always mounted, rendered when isOpen */}
+      <MeridianLens
+        isOpen={lensOpen}
+        onClose={closeLen}
+        activeTab={activePanel}
+      />
+
+      {/* Pulse Bar — fixed bottom, always visible */}
+      <PulseBar />
+    </SignalsProvider>
   );
 }
