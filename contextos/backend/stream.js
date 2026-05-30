@@ -100,9 +100,10 @@ export async function runStreamPass() {
 
 Items: ${JSON.stringify(cluster.items.map(i => ({ source: i._source, label: i._label })), null, 2)}
 
-Return JSON only:
-{ "title": string, "body": string, "dotStatus": "red"|"amber"|"blue"|"green", "actions": [{ "label": string, "type": string }] }`,
-          { temperature: 0.5, maxOutputTokens: 512 }
+Return ONLY this JSON object — no prose before or after, no markdown fences:
+{ "title": string, "body": string, "dotStatus": "red"|"amber"|"blue"|"green", "actions": [{ "label": string, "type": string }] }
+Be concise. Return only the JSON object. No prose before or after. No markdown fences.`,
+          { temperature: 0.2, maxOutputTokens: 800 }
         );
 
         addCard({

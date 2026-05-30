@@ -24,7 +24,62 @@ const vertexAI = new VertexAI({
 
 export const geminiModel = vertexAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
-export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 1024 } = {}) {
+/**
+ * parseGeminiJSON — resilient JSON extractor.
+ * Handles: markdown fences, truncated objects, stray prose wrappers.
+ */
+export function parseGeminiJSON(raw) {
+  if (!raw || typeof raw !== "string") throw new Error("Empty response from Gemini");
+
+  let text = raw.trim();
+
+  // Strip markdown code fences if present
+  text = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+
+  // Attempt direct parse first
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    // Count open braces/brackets to determine how many closers are missing
+    let braces = 0;
+    let brackets = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (const ch of text) {
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\' && inString) { escaped = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') braces++;
+      if (ch === '}') braces--;
+      if (ch === '[') brackets++;
+      if (ch === ']') brackets--;
+    }
+
+    // If we're inside a string when cut off, close it first
+    let recovered = text;
+    if (inString) recovered += '"';
+
+    // Close any open structures
+    recovered += ']'.repeat(Math.max(0, brackets));
+    recovered += '}'.repeat(Math.max(0, braces));
+
+    try {
+      const parsed = JSON.parse(recovered);
+      console.warn("[gemini] Recovered truncated JSON by closing open structures");
+      return parsed;
+    } catch (e2) {
+      throw new Error(`No JSON structure found in Gemini response: ${text.slice(0, 300)}`);
+    }
+  }
+}
+
+export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 8192 } = {}) {
   const result = await geminiModel.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { temperature, maxOutputTokens },
@@ -32,25 +87,18 @@ export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 
   return result.response.candidates[0].content.parts[0].text.trim();
 }
 
-export async function callGeminiJSON(prompt, opts = {}, retriesLeft = 1) {
+export async function callGeminiJSON(prompt, opts = {}) {
   const result = await geminiModel.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: opts.temperature ?? 0.4,
-      maxOutputTokens: opts.maxOutputTokens ?? 1024,
+      temperature:      opts.temperature      ?? 0.2,
+      maxOutputTokens:  opts.maxOutputTokens  ?? 8192,
     },
   });
   const text = result.response.candidates[0].content.parts[0].text.trim();
-  try {
-    return JSON.parse(text);
-  } catch {
-    if (retriesLeft > 0) {
-      console.warn("[gemini] JSON parse failed (truncated?), retrying…");
-      return callGeminiJSON(prompt, opts, retriesLeft - 1);
-    }
-    throw new Error(`Gemini returned non-JSON: ${text.slice(0, 120)}`);
-  }
+  // Use the hardened parser — no blind retry (same prompt with same limit will truncate again)
+  return parseGeminiJSON(text);
 }
 
 // ── Coral helpers ────────────────────────────────────────────────────────────

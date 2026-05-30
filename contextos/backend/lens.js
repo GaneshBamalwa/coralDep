@@ -71,12 +71,13 @@ lensRouter.post("/query", async (req, res) => {
     if (!query) return res.status(400).json({ error: "query is required" });
     const prompt = `You are a command interface for a developer workflow dashboard. Answer using only the provided context. Be direct.
 
-Response format (JSON only):
+Response format (Return ONLY this JSON object — no prose before or after, no markdown fences):
 { "type": "text" | "list" | "action" | "chart", "content": <string|array|object> }
+Be concise. Return only the JSON object. No prose before or after. No markdown fences.
 
 Context: ${JSON.stringify(context, null, 2)}
 Query: ${query}`;
-    const result = await callGeminiJSON(prompt, { temperature: 0.3, maxOutputTokens: 512 });
+    const result = await callGeminiJSON(prompt, { temperature: 0.2, maxOutputTokens: 800 });
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message, detail: "Query failed" });

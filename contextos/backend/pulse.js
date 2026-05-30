@@ -51,7 +51,7 @@ Examples of good output:
 
 Data: ${JSON.stringify(snapshot, null, 2)}`;
 
-  const text = await callGemini(prompt, { temperature: 0.3, maxOutputTokens: 80 });
+  const text = await callGemini(prompt, { temperature: 0.3, maxOutputTokens: 150 });
   // Strip quotes if model wraps the sentence
   return text.replace(/^["']|["']$/g, "").trim().slice(0, 140);
 }
@@ -97,15 +97,16 @@ Insight: "${sentence}"
 
 Data context: ${JSON.stringify(snapshot, null, 2)}
 
-Return JSON only:
+Return ONLY this JSON object — no prose before or after, no markdown fences:
 {
-  "elaboration": "3-5 sentences with specific details",
+  "elaboration": "3-5 sentences with specific details, each under 40 words",
   "actions": [
     { "label": "short verb-first label", "type": "show_in_graph | export_calendar | add_to_notion | open_url" }
   ]
-}`;
+}
+Be concise. Return only the JSON object. No prose before or after. No markdown fences.`;
 
-    const result = await callGeminiJSON(prompt, { temperature: 0.4, maxOutputTokens: 512 });
+    const result = await callGeminiJSON(prompt, { temperature: 0.2, maxOutputTokens: 800 });
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message, detail: "Elaboration failed" });
