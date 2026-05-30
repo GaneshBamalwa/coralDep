@@ -225,10 +225,29 @@ app.get("/api/briefing", async (req, res) => {
       notion_search:  `SELECT * FROM notion.search LIMIT 10`,
     };
 
+    const discordFetch = async () => {
+      try {
+        const guildsResult = await safeQuery("SELECT id, name FROM discord.guilds LIMIT 5", "discord_guilds");
+        const firstGuildId = guildsResult.rows?.[0]?.id;
+        if (!firstGuildId) return [];
+        const channelsResult = await safeQuery(`SELECT id, name FROM discord.channels WHERE guild_id = '${firstGuildId}' LIMIT 10`, "discord_channels");
+        const firstChannelId = channelsResult.rows?.[0]?.id;
+        if (!firstChannelId) return [];
+        const msgsResult = await safeQuery(`SELECT author__username, content, timestamp FROM discord.messages WHERE channel_id = '${firstChannelId}' AND limit = 20`, "discord_messages");
+        return msgsResult.rows || [];
+      } catch (e) {
+        throw e;
+      }
+    };
+
     const entries = Object.entries(queries).filter(([, sql]) => sql !== null);
-    const results = await Promise.allSettled(
-      entries.map(([label, sql]) => safeQuery(sql, label))
-    );
+    
+    // Fetch all SQL sources AND Discord sequentially-dependent queries in parallel
+    const [results, discordRes] = await Promise.all([
+      Promise.allSettled(entries.map(([label, sql]) => safeQuery(sql, label))),
+      discordFetch().then(rows => ({ status: 'fulfilled', value: { rows, source_error: null } }))
+                    .catch(e => ({ status: 'rejected', reason: e }))
+    ]);
 
     sources = {};
     entries.forEach(([label], i) => {
@@ -238,29 +257,9 @@ app.get("/api/briefing", async (req, res) => {
         : { rows: [], columns: [], source: label, source_error: r.reason?.message };
     });
 
-    // Discord: sequential (channels require guild_id)
-    try {
-      const guildsResult = await safeQuery("SELECT id, name FROM discord.guilds LIMIT 5", "discord_guilds");
-      const firstGuildId = guildsResult.rows?.[0]?.id;
-      let discordMessages = [];
-      if (firstGuildId) {
-        const channelsResult = await safeQuery(
-          `SELECT id, name FROM discord.channels WHERE guild_id = '${firstGuildId}' LIMIT 10`,
-          "discord_channels"
-        );
-        const firstChannelId = channelsResult.rows?.[0]?.id;
-        if (firstChannelId) {
-          const msgsResult = await safeQuery(
-            `SELECT author__username, content, timestamp FROM discord.messages WHERE channel_id = '${firstChannelId}' AND limit = 20`,
-            "discord_messages"
-          );
-          discordMessages = msgsResult.rows || [];
-        }
-      }
-      sources.discord = { rows: discordMessages, source_error: null };
-    } catch (e) {
-      sources.discord = { rows: [], source_error: e.message };
-    }
+    sources.discord = discordRes.status === "fulfilled" 
+      ? discordRes.value 
+      : { rows: [], source_error: discordRes.reason?.message };
   }
 
   const failed_sources = Object.entries(sources)

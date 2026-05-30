@@ -29,23 +29,20 @@ const SIGNAL_COLORS = {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function BriefingSkeleton() {
-  return (
-    <div className="space-y-3 p-4 animate-pulse">
-      <div className="skeleton h-10 w-full rounded-lg" />
-      <div className="skeleton h-24 w-full rounded-lg" />
-      <div className="skeleton h-20 w-full rounded-lg" />
-      <div className="skeleton h-16 w-full rounded-lg" />
-      <div className="skeleton h-12 w-full rounded-lg" />
-    </div>
-  );
-}
+// Removed BriefingSkeleton to render layout immediately and use inline skeletons
 
 function ClearLine() {
   return <p className="text-[11px] text-[#2d3748] italic px-1">Clear.</p>;
 }
 
-function SituationCard({ text }) {
+function SituationCard({ text, loading }) {
+  if (loading) {
+    return (
+      <div className="w-full px-4 pt-4 pb-2 fade-in">
+        <div style={{ height: '1.2em', width: '80%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+      </div>
+    );
+  }
   if (!text || text === "Clear.") return <ClearLine />;
   return (
     <div className="w-full px-4 pt-4 pb-2 fade-in">
@@ -106,7 +103,18 @@ function WatchOutCard({ items }) {
   );
 }
 
-function FocusWindowCard({ text }) {
+function FocusWindowCard({ text, loading }) {
+  if (loading) {
+    return (
+      <div className="mx-4 p-3 rounded-lg bg-[#00d4ff0a] border border-[#00d4ff28] glow-cyan fade-in">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Zap size={11} className="text-[#00d4ff]" />
+          <span className="text-[10px] font-mono font-bold text-[#00d4ff] tracking-widest uppercase">Best Focus Window</span>
+        </div>
+        <div style={{ height: '1.2em', width: '60%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+      </div>
+    );
+  }
   if (!text || text === "Clear.") return <ClearLine />;
   const timeMatch = text.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i);
   const timeBlock = timeMatch?.[1] || null;
@@ -127,7 +135,18 @@ function FocusWindowCard({ text }) {
   );
 }
 
-function OneThingCard({ text }) {
+function OneThingCard({ text, loading }) {
+  if (loading) {
+    return (
+      <div className="mx-4 p-3 rounded-lg bg-[#10b9810a] border border-[#10b98128] fade-in">
+        <div className="flex items-center gap-2 mb-1">
+          <Eye size={11} className="text-[#10b981]" />
+          <span className="text-[10px] font-mono font-bold text-[#10b981] tracking-widest uppercase">One Thing</span>
+        </div>
+        <div style={{ height: '1.2em', width: '70%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+      </div>
+    );
+  }
   if (!text || text === "Clear.") return null;
   return (
     <div className="mx-4 p-3 rounded-lg bg-[#10b9810a] border border-[#10b98128] fade-in">
@@ -313,10 +332,27 @@ export default function MorningBriefing() {
 
   useEffect(() => { refetch(); }, []);
 
-  const now      = new Date();
-  const hour     = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const timeStr  = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const [timeState, setTimeState] = useState(() => {
+    const now = new Date();
+    return {
+      hour: now.getHours(),
+      timeStr: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    };
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setTimeState({
+        hour: now.getHours(),
+        timeStr: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const greeting = timeState.hour < 12 ? "Good morning" : timeState.hour < 17 ? "Good afternoon" : "Good evening";
+  const timeStr  = timeState.timeStr;
 
   const briefing       = data?.briefing;
   const signals        = data?.signals || [];
@@ -373,8 +409,7 @@ export default function MorningBriefing() {
         </div>
       )}
 
-      {/* Loading */}
-      {loading && !data && <BriefingSkeleton />}
+      {/* Loading (removed blocking skeleton) */}
 
       {/* Empty */}
       {!loading && !data && !error && (
@@ -384,14 +419,14 @@ export default function MorningBriefing() {
       )}
 
       {/* 5-Section Briefing */}
-      {briefing && (
+      {(loading || briefing) && (
         <div className="flex flex-col gap-3 pb-3 fade-in">
-          <SituationCard    text={briefing.situation} />
+          <SituationCard    text={briefing?.situation} loading={loading && !data} />
           <div className="h-px bg-[#1e1e32] mx-4" />
-          <BeforeYouStartCard items={briefing.beforeYouStart} />
-          <WatchOutCard       items={briefing.watchOut} />
-          <FocusWindowCard    text={briefing.bestFocusWindow} />
-          <OneThingCard       text={briefing.oneThing} />
+          {!loading && briefing?.beforeYouStart && <BeforeYouStartCard items={briefing.beforeYouStart} />}
+          {!loading && briefing?.watchOut && <WatchOutCard items={briefing.watchOut} />}
+          <FocusWindowCard    text={briefing?.bestFocusWindow} loading={loading && !data} />
+          <OneThingCard       text={briefing?.oneThing} loading={loading && !data} />
         </div>
       )}
 
@@ -437,7 +472,12 @@ export default function MorningBriefing() {
           <span className={`w-1.5 h-1.5 rounded-full ${failedSources?.includes("calendar") ? "bg-[#ef4444]" : "bg-[#10b981]"}`} />
         </div>
         <div className="card p-1">
-          {calendarEvents.length > 0 ? (
+          {loading && !data ? (
+            <div className="p-3 space-y-3">
+              <div style={{ height: '1.2em', width: '90%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ height: '1.2em', width: '75%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </div>
+          ) : calendarEvents.length > 0 ? (
             calendarEvents.map((ev, i) => <CalendarEvent key={i} event={ev} />)
           ) : (
             <p className="text-[11px] text-[#475569] p-3 text-center">No data from calendar</p>
