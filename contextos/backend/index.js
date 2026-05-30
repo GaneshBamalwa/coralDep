@@ -7,7 +7,16 @@ import { fileURLToPath } from "url";
 import { VertexAI } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
 import { parseCoralOutput } from "./coralParser.js";
-import { detectSignals } from "./signals.js";
+import { detectSignals }    from "./signals.js";
+
+// ── Meridian module imports ───────────────────────────────────────────────────
+import { pulseRouter,    startPulseJob  } from "./pulse.js";
+import { signalsRouter               } from "./signals.js";
+import { lensRouter                  } from "./lens.js";
+import { streamRouter,  startStreamJob } from "./stream.js";
+import { pressureRouter              } from "./pressure.js";
+import { timeRouter                  } from "./timeaware.js";
+import { exportRouter                } from "./exports.js";
 import {
   mockCalendarEvents,
   mockGithubPRs,
@@ -603,12 +612,26 @@ async function checkADC() {
 validateEnv();
 checkADC();
 
+// ── Meridian API routes ───────────────────────────────────────────────────────
+app.use("/api/pulse",       pulseRouter);
+app.use("/api/signals",     signalsRouter);
+app.use("/api/lens",        lensRouter);
+app.use("/api/stream",      streamRouter);
+app.use("/api/pressure",    pressureRouter);
+app.use("/api/timecontext", timeRouter);
+app.use("/api/export",      exportRouter);
+
 // ── Server ────────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
   console.log(`   MOCK_MODE:     ${MOCK_MODE}`);
   console.log(`   GCLOUD_PROJECT: ${process.env.GCLOUD_PROJECT || "(not set)"}`);
   console.log(`   GCLOUD_LOCATION: ${process.env.GCLOUD_LOCATION || "us-central1"}\n`);
+
+  // Start Meridian background jobs after server is ready
+  startPulseJob();
+  startStreamJob();
+  console.log("[meridian] Background jobs started (pulse: 90s, stream: 5m)");
 });
 
 server.on("error", (err) => {
