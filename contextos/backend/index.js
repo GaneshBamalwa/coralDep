@@ -44,7 +44,7 @@ const geminiModel = vertexAI.getGenerativeModel({
   model: "gemini-2.5-pro",
 });
 
-async function generateBriefing(systemPrompt, userContext) {
+async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
   const request = {
     contents: [
       {
@@ -70,6 +70,10 @@ async function generateBriefing(systemPrompt, userContext) {
   try {
     return JSON.parse(text);
   } catch (e) {
+    if (retriesLeft > 0) {
+      console.warn("[vertex] JSON parsing failed or response truncated. Retrying once...");
+      return generateBriefing(systemPrompt, userContext, retriesLeft - 1);
+    }
     console.error("[vertex] Failed to parse JSON response:", text);
     return {
       situation: "Briefing generation failed - model returned malformed response.",

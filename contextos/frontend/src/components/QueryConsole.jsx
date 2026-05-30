@@ -6,27 +6,27 @@ import { useCoralQuery, useCoralSchema } from "../hooks/useCoral";
 const EXAMPLE_QUERIES = [
   {
     label: "Today's events",
-    sql: "SELECT * FROM google_calendar.events LIMIT 10",
+    sql: "SELECT summary, start, end, status\nFROM google_calendar.events\nWHERE date(start) = date('now')\nORDER BY start ASC\nLIMIT 10",
   },
   {
     label: "Open PRs",
-    sql: "SELECT number, title, state, updated_at, user_login\nFROM github.pulls\nWHERE owner = 'YOUR_OWNER'\n  AND repo = 'YOUR_REPO'\n  AND state = 'open'\nORDER BY updated_at DESC\nLIMIT 10",
+    sql: "SELECT number, title, state, updated_at, user__login\nFROM github.pulls\nWHERE owner = 'GaneshBamalwa'\nAND repo = 'coralHackathon'\nAND state = 'open'\nORDER BY updated_at DESC\nLIMIT 10",
   },
   {
     label: "Slack channels",
-    sql: "SELECT * FROM slack.channels LIMIT 20",
+    sql: "SELECT name, num_members, topic\nFROM slack.channels\nLIMIT 20",
   },
   {
     label: "Gmail labels",
-    sql: "SELECT * FROM gmail.labels LIMIT 20",
+    sql: "SELECT id, name, type, message_list_visibility, label_list_visibility\nFROM gmail.labels\nLIMIT 20",
   },
   {
     label: "Notion search",
-    sql: "SELECT * FROM notion.search LIMIT 10",
+    sql: "SELECT id, object, last_edited_time, url\nFROM notion.search\nLIMIT 10",
   },
   {
     label: "All tables",
-    sql: "SELECT schema_name, table_name FROM coral.tables ORDER BY 1, 2",
+    sql: "SELECT schema_name, table_name, description\nFROM coral.tables\nORDER BY schema_name ASC",
   },
 ];
 
