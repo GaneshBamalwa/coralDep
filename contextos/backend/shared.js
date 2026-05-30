@@ -32,7 +32,7 @@ export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 
   return result.response.candidates[0].content.parts[0].text.trim();
 }
 
-export async function callGeminiJSON(prompt, opts = {}) {
+export async function callGeminiJSON(prompt, opts = {}, retriesLeft = 1) {
   const result = await geminiModel.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
@@ -42,8 +42,15 @@ export async function callGeminiJSON(prompt, opts = {}) {
     },
   });
   const text = result.response.candidates[0].content.parts[0].text.trim();
-  try   { return JSON.parse(text); }
-  catch { throw new Error(`Gemini returned non-JSON: ${text.slice(0, 120)}`); }
+  try {
+    return JSON.parse(text);
+  } catch {
+    if (retriesLeft > 0) {
+      console.warn("[gemini] JSON parse failed (truncated?), retrying…");
+      return callGeminiJSON(prompt, opts, retriesLeft - 1);
+    }
+    throw new Error(`Gemini returned non-JSON: ${text.slice(0, 120)}`);
+  }
 }
 
 // ── Coral helpers ────────────────────────────────────────────────────────────
