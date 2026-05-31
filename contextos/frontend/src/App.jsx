@@ -3,28 +3,28 @@ import {
   Sun, GitBranch, RefreshCcw, AlignLeft, Terminal, Cpu, CalendarDays,
 } from "lucide-react";
 
-import MorningBriefing  from "./components/MorningBriefing";
-import FocusDebt        from "./components/FocusDebt";
-import UnfinishedLoops  from "./components/UnfinishedLoops";
-import ContextTimeline  from "./components/ContextTimeline";
-import QueryConsole     from "./components/QueryConsole";
-import SourceStatus     from "./components/SourceStatus";
-import TodayTab         from "./components/TodayTab/TodayTab";
-import SignalStream     from "./components/SignalStream/SignalStream";
-import MeridianLens     from "./components/MeridianLens/MeridianLens";
-import PulseBar         from "./components/PulseBar/PulseBar";
-import { ErrorBoundary }  from "./components/ErrorBoundary";
+import MorningBriefing from "./components/MorningBriefing";
+import FocusDebt from "./components/FocusDebt";
+import UnfinishedLoops from "./components/UnfinishedLoops";
+import ContextTimeline from "./components/ContextTimeline";
+import QueryConsole from "./components/QueryConsole";
+import SourceStatus from "./components/SourceStatus";
+import TodayTab from "./components/TodayTab/TodayTab";
+import SignalStream from "./components/SignalStream/SignalStream";
+import MeridianLens from "./components/MeridianLens/MeridianLens";
+import PulseBar from "./components/PulseBar/PulseBar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SignalsProvider } from "./contexts/SignalsContext";
-import { useLens }        from "./hooks/useLens";
+import { useLens } from "./hooks/useLens";
 
 // ── Nav items ──────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "briefing",  label: "Briefing",  icon: Sun },
-  { id: "today_tab", label: "TODAY",     icon: CalendarDays },
-  { id: "today",     label: "Focus",     icon: RefreshCcw },
-  { id: "loops",     label: "Loops",     icon: GitBranch },
-  { id: "timeline",  label: "Timeline",  icon: AlignLeft },
-  { id: "console",   label: "Console",   icon: Terminal },
+  { id: "briefing", label: "Briefing", icon: Sun },
+  { id: "today_tab", label: "TODAY", icon: CalendarDays },
+  { id: "today", label: "Focus", icon: RefreshCcw },
+  { id: "loops", label: "Loops", icon: GitBranch },
+  { id: "timeline", label: "Timeline", icon: AlignLeft },
+  { id: "console", label: "Console", icon: Terminal },
 ];
 
 // ── Logo ───────────────────────────────────────────────────────────────────
@@ -43,9 +43,6 @@ function Logo() {
       </div>
       <div>
         <div className="font-mono text-[13px] font-bold text-text-primary leading-none tracking-tight">
-          ContextOS
-        </div>
-        <div className="font-mono text-[9px] text-text-secondary mt-0.5 tracking-widest uppercase">
           Meridian
         </div>
       </div>
@@ -87,13 +84,13 @@ function Sidebar({ active, onChange }) {
 function MainPanel({ active }) {
   let content;
   switch (active) {
-    case "briefing":  content = <MorningBriefing />; break;
-    case "today_tab": content = <TodayTab />;        break;
-    case "today":     content = <FocusDebt />;       break;
-    case "loops":     content = <UnfinishedLoops />; break;
-    case "timeline":  content = <ContextTimeline />; break;
-    case "console":   content = <QueryConsole />;    break;
-    default:          content = <FocusDebt />;       break;
+    case "briefing": content = <MorningBriefing />; break;
+    case "today_tab": content = <TodayTab />; break;
+    case "today": content = <FocusDebt />; break;
+    case "loops": content = <UnfinishedLoops />; break;
+    case "timeline": content = <ContextTimeline />; break;
+    case "console": content = <QueryConsole />; break;
+    default: content = <FocusDebt />; break;
   }
   return <ErrorBoundary key={active}>{content}</ErrorBoundary>;
 }
@@ -121,9 +118,9 @@ function Header({ active }) {
   const Icon = item?.icon || Sun;
 
   return (
-      <div
-        className="flex items-center gap-3 px-6 py-3 border-b border-bg-border shrink-0 glass-strong"
-      >
+    <div
+      className="flex items-center gap-3 px-6 py-3 border-b border-bg-border shrink-0 glass-strong"
+    >
       <Icon size={14} className="text-accent" />
       <h1 className="text-[13px] font-semibold text-text-secondary">
         {item?.label ?? "Dashboard"}
@@ -132,7 +129,7 @@ function Header({ active }) {
       {/* Cmd+K hint */}
       <div className="hidden md:flex items-center gap-3">
         <div className="kbd-hint flex items-center gap-3">
-          <kbd style={{background:'transparent',border:'none',padding:0}}>⌘K</kbd>
+          <kbd style={{ background: 'transparent', border: 'none', padding: 0 }}>⌘K</kbd>
           <span className="text-text-primary">Press</span>
           <span className="font-semibold text-text-primary">Ctrl/Cmd + K</span>
           <span className="text-text-secondary">to open Lens</span>
