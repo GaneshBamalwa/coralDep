@@ -15,7 +15,7 @@ ContextOS pulls fragmented workflow data — calendar, tasks, GitHub, Slack, Dis
 | Frontend | React 18 + Vite + Tailwind CSS |
 | Backend | Node.js + Express (Coral proxy) |
 | Data layer | [Coral CLI](https://coral.so/docs) — SQL over live APIs |
-| LLM synthesis | Anthropic Claude (`claude-sonnet-4-20250514`) |
+| LLM synthesis | Vertex AI core agent (`gemini-2.5-pro` by default) |
 | Discord source | Custom Coral HTTP source spec |
 
 ---
@@ -88,10 +88,15 @@ Key variables:
 
 ```env
 MOCK_MODE=true                  # true = no Coral needed
-ANTHROPIC_API_KEY=sk-ant-...    # for Claude briefing synthesis
+GOOGLE_CLOUD_PROJECT=your-project-id
+GCLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+VERTEX_MODEL=gemini-2.5-pro
 GITHUB_OWNER=your-org
 GITHUB_REPO=your-repo
 ```
+
+For the full Google Cloud setup, see [`GCP_VERTEX_SETUP.md`](./GCP_VERTEX_SETUP.md).
 
 ### 3. Run
 
@@ -149,7 +154,7 @@ coral sql "SELECT summary, start FROM google_calendar.events WHERE date(start) =
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/api/query` | Run raw Coral SQL |
-| `GET` | `/api/briefing` | Morning briefing via Claude + all sources |
+| `GET` | `/api/briefing` | Morning briefing via Vertex AI + all sources |
 | `GET` | `/api/focus-debt` | Planned vs completed tasks (7 days) |
 | `GET` | `/api/unfinished-loops` | Work touched but never closed |
 | `GET` | `/api/sources` | Connected source status |

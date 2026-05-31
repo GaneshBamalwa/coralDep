@@ -172,7 +172,7 @@ export default function FocusDebt() {
           {/* Bar Chart */}
           {byDay.length > 0 ? (
             <div className="card p-4">
-              <div className="text-[10px] font-mono text-[#475569] uppercase tracking-widest mb-4">
+              <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest mb-4">
                 Daily Breakdown
               </div>
               <ResponsiveContainer width="100%" height={200}>
@@ -204,8 +204,8 @@ export default function FocusDebt() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : (
-            <p className="text-[13px] text-[#475569] text-center py-8">
+            ) : (
+            <p className="text-[13px] text-text-secondary text-center py-8">
               {failedSources?.length > 0 ? `No data from ${failedSources.join(', ')}` : "No data from GitHub/Notion"}
             </p>
           )}

@@ -4,10 +4,10 @@ import dotenv from "dotenv";
 import { exec } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { VertexAI } from "@google-cloud/vertexai";
 import { GoogleAuth } from "google-auth-library";
 import { parseCoralOutput } from "./coralParser.js";
 import { detectSignals }    from "./signals.js";
+import { callCoreAgent, callCoreAgentJSON, getVertexStatus } from "./vertexAgent.js";
 
 // ── Meridian module imports ───────────────────────────────────────────────────
 import { pulseRouter,    startPulseJob  } from "./pulse.js";
@@ -45,46 +45,18 @@ const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
 
 // ── Vertex AI setup ──────────────────────────────────────────────────────────
-const vertexAI = new VertexAI({
-  project: process.env.GCLOUD_PROJECT || "your-gcp-project-id",
-  location: process.env.GCLOUD_LOCATION || "us-central1",
-});
-
-const geminiModel = vertexAI.getGenerativeModel({
-  model: "gemini-2.5-pro",
-});
-
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
-  const request = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: `${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`,
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      responseMimeType: "application/json",
+  try {
+    return await callCoreAgentJSON(`${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`, {
       temperature: 0.4,
       maxOutputTokens: 2048,
-    },
-  };
-
-  const result = await geminiModel.generateContent(request);
-  const response = result.response;
-  const text = response.candidates[0].content.parts[0].text;
-
-  try {
-    return JSON.parse(text);
+    });
   } catch (e) {
     if (retriesLeft > 0) {
       console.warn("[vertex] JSON parsing failed or response truncated. Retrying once...");
       return generateBriefing(systemPrompt, userContext, retriesLeft - 1);
     }
-    console.error("[vertex] Failed to parse JSON response:", text);
+    console.error("[vertex] Failed to parse JSON response:", e.message);
     return {
       situation: "Briefing generation failed - model returned malformed response.",
       beforeYouStart: [],
@@ -518,12 +490,14 @@ app.get("/api/sources", async (req, res) => {
 
 // ── GET /api/health ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
+  const vertex = getVertexStatus();
   res.json({
     status:         "ok",
     mock_mode:      MOCK_MODE,
     github_owner:   GITHUB_OWNER || null,
     github_repo:    GITHUB_REPO  || null,
-    gcloud_project: process.env.GCLOUD_PROJECT || null,
+    gcloud_project: vertex.project,
+    vertex,
     timestamp:      new Date().toISOString(),
   });
 });
@@ -550,13 +524,12 @@ Keep replies under 150 words unless the user explicitly asks for something longe
   ];
 
   try {
-    const request = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
+    const reply = await callCoreAgent(null, {
+      systemInstruction: systemPrompt,
       contents,
-      generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
-    };
-    const result = await geminiModel.generateContent(request);
-    const reply  = result.response.candidates[0].content.parts[0].text;
+      temperature: 0.5,
+      maxOutputTokens: 512,
+    });
     return res.json({ reply: reply.trim() });
   } catch (e) {
     console.error("[chat] LLM error:", e.message);
@@ -587,6 +560,7 @@ function buildFallbackBriefing(sources) {
 
 // ── Startup validation ─────────────────────────────────────────────────────
 function validateEnv() {
+  const vertex = getVertexStatus();
   const tokens = {
     GMAIL_ACCESS_TOKEN:           process.env.GMAIL_ACCESS_TOKEN,
     GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN,
@@ -597,13 +571,12 @@ function validateEnv() {
   for (const [key, val] of Object.entries(tokens)) {
     console.log(`   [${val ? "✓" : "!"}] ${key} is ${val ? "present" : "missing"}`);
   }
-  if (!process.env.GCLOUD_PROJECT) {
+  if (!vertex.project) {
     console.warn("[env] WARNING: GCLOUD_PROJECT not set - Vertex AI calls will fail");
   }
-  if (!process.env.GCLOUD_LOCATION) {
-    console.warn("[env] WARNING: GCLOUD_LOCATION not set - defaulting to us-central1");
-    process.env.GCLOUD_LOCATION = "us-central1";
-  }
+  console.log(`   [${vertex.project ? "✓" : "!"}] VERTEX_PROJECT is ${vertex.project || "missing"}`);
+  console.log(`   [✓] VERTEX_LOCATION is ${vertex.location}`);
+  console.log(`   [✓] VERTEX_MODEL is ${vertex.model}`);
 }
 
 async function checkADC() {
@@ -633,9 +606,11 @@ app.use("/api/export",      exportRouter);
 // ── Server ────────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
+  const vertex = getVertexStatus();
   console.log(`   MOCK_MODE:     ${MOCK_MODE}`);
-  console.log(`   GCLOUD_PROJECT: ${process.env.GCLOUD_PROJECT || "(not set)"}`);
-  console.log(`   GCLOUD_LOCATION: ${process.env.GCLOUD_LOCATION || "us-central1"}\n`);
+  console.log(`   GCLOUD_PROJECT: ${vertex.project || "(not set)"}`);
+  console.log(`   GCLOUD_LOCATION: ${vertex.location}`);
+  console.log(`   VERTEX_MODEL: ${vertex.model}\n`);
 
   // Start Meridian background jobs after server is ready
   startPulseJob();

@@ -208,7 +208,7 @@ export default function QueryConsole() {
       <div className="flex gap-5 flex-1 min-h-0">
         {/* Schema panel */}
         {showSchema && (
-              <div className="w-56 shrink-0 card p-3 flex flex-col gap-2 overflow-hidden">
+          <div className="w-56 shrink-0 card p-3 flex flex-col gap-2 overflow-hidden">
             <div className="relative">
               <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#475569]" />
               <input
@@ -224,18 +224,14 @@ export default function QueryConsole() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#e2e8f0]"
                 >
                   <X size={10} />
-                <button
-                    key={table}
-                    onClick={() => onSelect(schemaName, table)}
-                    className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-[#00d4ff0a] hover:text-accent text-text-secondary transition-colors group"
-                  >
-              {schemaLoading && (
-                    <span className="font-mono text-[11px] group-hover:text-accent">{table}</span>
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="skeleton h-5 w-full rounded" />
-                  ))}
-                </div>
+                </button>
               )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
+              {schemaLoading &&
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="skeleton h-5 w-full rounded" />
+                ))}
               {schemaError && (
                 <p className="text-[11px] text-[#ef4444] font-mono">{schemaError}</p>
               )}

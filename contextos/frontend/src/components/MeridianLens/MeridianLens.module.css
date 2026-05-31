@@ -4,12 +4,12 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(15, 23, 32, 0.42);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 80px;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(8px) saturate(90%);
   animation: fadeIn 0.15s ease;
 }
 
@@ -21,10 +21,10 @@
 .palette {
   width: 600px;
   max-width: calc(100vw - 32px);
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.05);
+  background: linear-gradient(180deg, var(--surface-02), var(--surface-01));
+  border: 1px solid rgba(11,95,83,0.14);
   border-radius: 12px;
-  box-shadow: 0 24px 64px rgba(2,6,23,0.6), 0 0 0 1px rgba(0,212,255,0.06);
+  box-shadow: 0 28px 80px var(--shadow-soft), 0 0 0 1px rgba(255,255,255,0.18);
   overflow: hidden;
   animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -39,11 +39,12 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
+  background: linear-gradient(90deg, rgba(11,95,83,0.08), transparent);
   border-bottom: 1px solid var(--border-ghost);
 }
 
 .headerIcon {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 12px;
   color: var(--accent-cta);
   font-weight: 700;
@@ -52,18 +53,19 @@
 .headerTitle {
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 800;
+  color: var(--accent);
   flex: 1;
 }
 
 .escHint {
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
-  color: var(--muted);
-  background: rgba(255,255,255,0.02);
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: var(--accent);
+  background: rgba(11,95,83,0.06);
+  padding: 3px 7px;
+  border: 1px solid rgba(11,95,83,0.1);
+  border-radius: 999px;
 }
 
 .suggestions {
@@ -84,18 +86,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 8px 9px;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.1s;
   width: 100%;
   text-align: left;
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.42);
+  border: 1px solid transparent;
 }
 
 .suggestionItem:hover {
-  background: rgba(255,255,255,0.02);
+  background: rgba(11,95,83,0.06);
+  border-color: rgba(11,95,83,0.12);
 }
 
 .suggIcon {
@@ -103,12 +106,12 @@
   width: 18px;
   text-align: center;
   flex-shrink: 0;
-  color: var(--muted);
+  color: var(--accent);
 }
 
 .suggLabel {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -119,7 +122,7 @@
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: 6px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));
+  background: rgba(11,95,83,0.05);
   font-size: 11px;
   color: var(--muted);
   border: 1px solid var(--border-ghost);
@@ -133,8 +136,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));
-  border: 1px solid rgba(255,255,255,0.03);
+  background: var(--surface-02);
+  border: 1px solid rgba(11,95,83,0.12);
   border-radius: 8px;
   padding: 8px 12px;
   transition: border-color 0.15s;
@@ -158,7 +161,8 @@
   outline: none;
   font-size: 13px;
   color: var(--text);
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-ui);
+  font-weight: 650;
 }
 
 .input::placeholder {
@@ -169,8 +173,8 @@
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));
-  border: 1px solid rgba(255,255,255,0.03);
+  background: var(--surface-02);
+  border: 1px solid rgba(11,95,83,0.1);
   max-height: 220px;
   overflow-y: auto;
 }

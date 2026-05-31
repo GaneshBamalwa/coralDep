@@ -21,8 +21,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"GT Canon VF Variable L Black"', 'Inter', 'sans-serif'],
-        sans: ["Inter", "sans-serif"],
+        display: ['"GT Canon VF Variable L Black"', "sans-serif"],
+        sans: ['"GT Canon VF Variable L Black"', "sans-serif"],
         mono: ['"JetBrains Mono"', "monospace"],
       },
       animation: {

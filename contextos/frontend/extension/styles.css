@@ -1,10 +1,10 @@
-:root{--accent:#0b5f53;--muted:#6b6b6b}
-body{font-family:Inter,system-ui,Arial,sans-serif;margin:0;padding:12px;background:#fff;color:#0f1720;width:260px}
+:root{--accent:#0b5f53;--accent-cta:#0f7a64;--muted:#6b6b6b;--bg:#fbf8f3;--border:rgba(15,23,32,0.08)}
+body{font-family:"GT Canon VF Variable L Black",sans-serif;margin:0;padding:12px;background:var(--bg);color:#0f1720;width:260px}
 .wrap h3{margin:0 0 8px 0;font-size:16px}
 .status{font-size:12px;color:var(--muted);margin-bottom:8px}
 .nav{display:flex;flex-direction:column;gap:6px}
-.nav button{padding:8px;border-radius:8px;border:1px solid #e6e6e6;background:#fbfbfb;cursor:pointer;text-align:left}
-.nav button:hover{background:rgba(11,95,83,0.04)}
+.nav button{padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.72);cursor:pointer;text-align:left;color:#0f1720}
+.nav button:hover{background:rgba(11,95,83,0.05);border-color:rgba(11,95,83,0.16)}
 .actions{display:flex;gap:8px;margin-top:10px}
 .actions button{flex:1;padding:8px;border-radius:8px;border:none;background:var(--accent);color:white}
 .actions a{font-size:12px;color:var(--muted);align-self:center}
