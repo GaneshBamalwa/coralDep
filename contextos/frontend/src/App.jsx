@@ -196,11 +196,13 @@ export default function App() {
       </div>
 
       {/* Meridian Lens — always mounted, rendered when isOpen */}
-      <MeridianLens
-        isOpen={lensOpen}
-        onClose={closeLen}
-        activeTab={activePanel}
-      />
+      <ErrorBoundary>
+        <MeridianLens
+          isOpen={lensOpen}
+          onClose={closeLen}
+          activeTab={activePanel}
+        />
+      </ErrorBoundary>
 
       {/* Pulse Bar — fixed bottom, always visible */}
       <PulseBar />

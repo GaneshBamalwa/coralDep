@@ -224,13 +224,12 @@ export default function QueryConsole() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#e2e8f0]"
                 >
                   <X size={10} />
-                <button
-                    key={table}
-                    onClick={() => onSelect(schemaName, table)}
-                    className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-[#00d4ff0a] hover:text-accent text-text-secondary transition-colors group"
-                  >
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0 mt-2 space-y-2">
               {schemaLoading && (
-                    <span className="font-mono text-[11px] group-hover:text-accent">{table}</span>
+                <div className="space-y-1">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="skeleton h-5 w-full rounded" />
                   ))}

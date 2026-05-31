@@ -9,7 +9,7 @@
 
 import { Router }              from "express";
 import { annotateWithSignals } from "./signals.js";
-import { callGeminiJSON }      from "./shared.js";
+import { callGeminiJSON, safeQuery } from "./shared.js";
 import { executeExport }       from "./exports.js";
 import { get as cacheGet }     from "./cache.js";
 
@@ -69,15 +69,39 @@ lensRouter.post("/query", async (req, res) => {
   try {
     const { query, context = {} } = req.body;
     if (!query) return res.status(400).json({ error: "query is required" });
+    
+    // Inject the real backend context
+    const cached = cacheGet("signals:annotated") || {};
+    const fullContext = { ...context, active_signals: cached };
+
     const prompt = `You are a command interface for a developer workflow dashboard. Answer using only the provided context. Be direct.
 
-Response format (Return ONLY this JSON object — no prose before or after, no markdown fences):
+If the user asks to "show" or "retrieve" data that is not in the context (e.g. unread emails, list of PRs, Slack messages), you can execute a SQL query against Coral by returning:
+{ "type": "sql", "content": "SELECT ... FROM ..." }
+Supported schemas: github.issues, github.pulls, slack.channels, slack.users, google_calendar.events, gmail.messages, notion.search, discord.messages, discord.channels.
+
+Otherwise, answer directly and return:
 { "type": "text" | "list" | "action" | "chart", "content": <string|array|object> }
 Be concise. Return only the JSON object. No prose before or after. No markdown fences.
 
-Context: ${JSON.stringify(context, null, 2)}
+Context: ${JSON.stringify(fullContext, null, 2)}
 Query: ${query}`;
-    const result = await callGeminiJSON(prompt, { temperature: 0.2, maxOutputTokens: 800 });
+
+    let result = await callGeminiJSON(prompt, { temperature: 0.2, maxOutputTokens: 800 });
+    
+    if (result.type === "sql") {
+       console.log(`[lens] LLM requested SQL execution: ${result.content}`);
+       const sqlRes = await safeQuery(result.content, "lens_query");
+       
+       const formatPrompt = `The user asked: "${query}". You ran the SQL query \`${result.content}\` and got this JSON result:
+${JSON.stringify(sqlRes.rows || sqlRes.source_error).slice(0, 3000)}
+
+Format this data into a helpful response to the user.
+Return ONLY this JSON object:
+{ "type": "text" | "list" | "action" | "chart", "content": <string|array|object> }`;
+       result = await callGeminiJSON(formatPrompt, { temperature: 0.2, maxOutputTokens: 800 });
+    }
+
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message, detail: "Query failed" });

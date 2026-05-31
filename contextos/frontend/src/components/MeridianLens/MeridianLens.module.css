@@ -4,12 +4,11 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.85); /* Darker backdrop */
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 80px;
-  backdrop-filter: blur(2px);
   animation: fadeIn 0.15s ease;
 }
 
@@ -21,12 +20,15 @@
 .palette {
   width: 600px;
   max-width: calc(100vw - 32px);
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  background: #0f0f1a; /* Solid dark background to match other cards */
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 12px;
   box-shadow: 0 24px 64px rgba(2,6,23,0.6), 0 0 0 1px rgba(0,212,255,0.06);
   overflow: hidden;
   animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
 }
 
 @keyframes slideDown {
@@ -127,16 +129,20 @@
 
 .inputArea {
   padding: 10px 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .inputRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));
+  background: #0a0a14;
   border: 1px solid rgba(255,255,255,0.03);
   border-radius: 8px;
   padding: 8px 12px;
+  flex: 1;
   transition: border-color 0.15s;
 }
 
@@ -157,7 +163,7 @@
   border: none;
   outline: none;
   font-size: 13px;
-  color: var(--text);
+  color: #ffffff;
   font-family: "Inter", sans-serif;
 }
 
@@ -169,10 +175,40 @@
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));
+  background: #0a0a14;
   border: 1px solid rgba(255,255,255,0.03);
-  max-height: 220px;
   overflow-y: auto;
+}
+
+.markdownText p {
+  margin-bottom: 0.5rem;
+}
+.markdownText p:last-child {
+  margin-bottom: 0;
+}
+.markdownText strong {
+  font-weight: 600;
+  color: #fff;
+}
+.markdownText ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdownText ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdownText li {
+  margin-bottom: 0.25rem;
+}
+.markdownText a {
+  color: var(--accent-cta);
+  text-decoration: none;
+}
+.markdownText a:hover {
+  text-decoration: underline;
 }
 
 .responseText {

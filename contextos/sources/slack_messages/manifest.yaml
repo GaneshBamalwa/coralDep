@@ -1,0 +1,255 @@
+name: slack_messages
+version: 1.0.0
+dsl_version: 3
+backend: http
+description: >
+  Extends Slack with message history, unread counts, and conversation content
+  using a Slack User Token (xoxp-) with channels:history and channels:read scopes.
+
+inputs:
+  SLACK_USER_TOKEN:
+    kind: secret
+    hint: Slack User Token starting with xoxp- (requires channels:history, channels:read, users:read scopes)
+    credential:
+      methods:
+        - type: source_config
+          label: Paste Slack User Token
+
+base_url: https://slack.com/api
+auth:
+  type: HeaderAuth
+  headers:
+    - name: Authorization
+      from: template
+      template: "Bearer {{input.SLACK_USER_TOKEN}}"
+
+test_queries:
+  - SELECT id, name FROM slack_messages.channels LIMIT 1
+
+tables:
+  - name: channels
+    description: >
+      All Slack channels the user is a member of. Use the id column as channel_id
+      for querying messages.
+    request:
+      method: GET
+      path: /conversations.list
+      query:
+        - name: types
+          from: literal
+          value: "public_channel,private_channel"
+        - name: limit
+          from: literal
+          value: "200"
+    response:
+      rows_path:
+        - channels
+    pagination:
+      mode: none
+    columns:
+      - name: id
+        type: Utf8
+        nullable: false
+        description: Channel ID — use this as channel_id when querying messages
+        expr:
+          kind: path
+          path: [id]
+      - name: name
+        type: Utf8
+        nullable: true
+        description: Channel name
+        expr:
+          kind: path
+          path: [name]
+      - name: is_private
+        type: Boolean
+        nullable: true
+        description: Whether the channel is private
+        expr:
+          kind: path
+          path: [is_private]
+      - name: is_archived
+        type: Boolean
+        nullable: true
+        description: Whether the channel is archived
+        expr:
+          kind: path
+          path: [is_archived]
+      - name: num_members
+        type: Int64
+        nullable: true
+        description: Number of members in the channel
+        expr:
+          kind: path
+          path: [num_members]
+      - name: topic
+        type: Utf8
+        nullable: true
+        description: Channel topic
+        expr:
+          kind: path
+          path: [topic, value]
+      - name: purpose
+        type: Utf8
+        nullable: true
+        description: Channel purpose
+        expr:
+          kind: path
+          path: [purpose, value]
+      - name: unread_count
+        type: Int64
+        nullable: true
+        description: Number of unread messages in this channel
+        expr:
+          kind: path
+          path: [unread_count]
+      - name: last_read
+        type: Utf8
+        nullable: true
+        description: Timestamp of last read message
+        expr:
+          kind: path
+          path: [last_read]
+
+  - name: messages
+    description: >
+      Messages from a specific Slack channel. Requires channel_id filter.
+      Use the id from slack_messages.channels as the channel_id.
+      Requires channels:history scope on the user token.
+    filters:
+      - name: channel_id
+        required: true
+      - name: limit
+        required: false
+    request:
+      method: GET
+      path: /conversations.history
+      query:
+        - name: channel
+          from: filter
+          key: channel_id
+        - name: limit
+          from: filter
+          key: limit
+    response:
+      rows_path:
+        - messages
+    pagination:
+      mode: none
+    columns:
+      - name: channel_id
+        type: Utf8
+        nullable: true
+        virtual: true
+        expr:
+          kind: from_filter
+          key: channel_id
+      - name: ts
+        type: Utf8
+        nullable: false
+        description: Message timestamp (Unix timestamp as string)
+        expr:
+          kind: path
+          path: [ts]
+      - name: text
+        type: Utf8
+        nullable: true
+        description: Message text content
+        expr:
+          kind: path
+          path: [text]
+      - name: user
+        type: Utf8
+        nullable: true
+        description: User ID of the message author
+        expr:
+          kind: path
+          path: [user]
+      - name: type
+        type: Utf8
+        nullable: true
+        description: Message type
+        expr:
+          kind: path
+          path: [type]
+      - name: subtype
+        type: Utf8
+        nullable: true
+        description: Message subtype if applicable
+        expr:
+          kind: path
+          path: [subtype]
+      - name: reply_count
+        type: Int64
+        nullable: true
+        description: Number of replies to this message
+        expr:
+          kind: path
+          path: [reply_count]
+      - name: reactions
+        type: Utf8
+        nullable: true
+        description: Reactions on this message
+        expr:
+          kind: path
+          path: [reactions]
+      - name: edited
+        type: Utf8
+        nullable: true
+        description: Whether and when the message was edited
+        expr:
+          kind: path
+          path: [edited]
+
+  - name: unread
+    description: >
+      Channels that have unread messages for the authenticated user.
+      Returns only channels where unread_count > 0.
+      Use this to quickly find what needs attention.
+    request:
+      method: GET
+      path: /conversations.list
+      query:
+        - name: types
+          from: literal
+          value: "public_channel,private_channel"
+        - name: limit
+          from: literal
+          value: "200"
+        - name: exclude_archived
+          from: literal
+          value: "true"
+    response:
+      rows_path:
+        - channels
+    pagination:
+      mode: none
+    columns:
+      - name: id
+        type: Utf8
+        nullable: false
+        description: Channel ID
+        expr:
+          kind: path
+          path: [id]
+      - name: name
+        type: Utf8
+        nullable: true
+        description: Channel name
+        expr:
+          kind: path
+          path: [name]
+      - name: unread_count
+        type: Int64
+        nullable: true
+        description: Number of unread messages
+        expr:
+          kind: path
+          path: [unread_count]
+      - name: last_read
+        type: Utf8
+        nullable: true
+        description: Timestamp of last read message
+        expr:
+          kind: path
+          path: [last_read]
