@@ -39,7 +39,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'missing_key_provided' });
 
 const PORT = process.env.PORT || 3001;
 const MOCK_MODE = process.env.MOCK_MODE === "true";
@@ -938,7 +938,7 @@ app.use("/api/timecontext", timeRouter);
 app.use("/api/export",      exportRouter);
 
 // ── Server ────────────────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
   console.log(`   MOCK_MODE:     ${MOCK_MODE}`);
   console.log(`   GCLOUD_PROJECT: ${process.env.GCLOUD_PROJECT || "(not set)"}`);

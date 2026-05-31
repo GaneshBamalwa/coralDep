@@ -20,6 +20,49 @@ ContextOS pulls fragmented workflow data — calendar, tasks, GitHub, Slack, Dis
 
 ---
 
+## Architecture
+
+```mermaid
+graph TD
+    subgraph Frontend [Frontend (React + Vite)]
+        UI[User Interface Dashboard]
+        Hooks[Custom API Hooks]
+        UI --> Hooks
+    end
+
+    subgraph Backend [Backend API (Node.js + Express)]
+        API[API Endpoints]
+        Logic[Meridian Data & AI Logic]
+        
+        API --> Logic
+    end
+
+    subgraph CoralLayer [Coral Data Layer]
+        CoralSQL[Coral SQL Engine]
+    end
+
+    subgraph DataSources [External APIs / Sources]
+        Discord[Discord]
+        GitHub[GitHub]
+        Slack[Slack]
+        GCal[Google Calendar]
+        Notion[Notion]
+        Gmail[Gmail]
+    end
+
+    subgraph LLMs [LLM Providers]
+        Vertex[Google Vertex AI Gemini]
+        Groq[Groq Llama-3]
+    end
+
+    Hooks <-->|REST| API
+    Logic <-->|CLI Exec| CoralSQL
+    Logic <-->|Synthesis & Parsing| LLMs
+    CoralSQL <-->|Live API Queries| DataSources
+```
+
+---
+
 ## Project Structure
 
 ```
