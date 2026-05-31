@@ -11,16 +11,16 @@
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  background: rgba(6, 6, 16, 0.92);
-  border-top: 1px solid #1e1e32;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-top: 1px solid rgba(255,255,255,0.04);
   backdrop-filter: blur(8px);
   cursor: pointer;
   user-select: none;
 }
 
 .bar:hover {
-  background: rgba(10, 10, 24, 0.96);
-  border-top-color: #00d4ff22;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+  border-top-color: rgba(0,212,255,0.08);
 }
 
 .sentence {
@@ -60,9 +60,9 @@
   z-index: 49;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  background: rgba(8, 8, 20, 0.97);
-  border-top: 1px solid #1e1e32;
-  backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-top: 1px solid rgba(255,255,255,0.04);
+  backdrop-filter: blur(14px) saturate(120%);
   display: flex;
   flex-direction: column;
   padding: 16px 20px 12px;
@@ -103,8 +103,8 @@
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid #1e1e32;
-  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));
   color: #94a3b8;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;

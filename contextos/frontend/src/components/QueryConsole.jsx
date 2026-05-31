@@ -98,7 +98,7 @@ function ResultsTable({ columns, rows, isMock }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-mono text-[#475569] uppercase tracking-widest">
+        <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
           Results — {rows.length} row{rows.length !== 1 ? "s" : ""}
         </span>
         {isMock && (
@@ -117,7 +117,7 @@ function ResultsTable({ columns, rows, isMock }) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="text-center text-[#475569] py-8">
+                <td colSpan={columns.length} className="text-center text-text-secondary py-8">
                   Query returned 0 rows
                 </td>
               </tr>
@@ -127,7 +127,7 @@ function ResultsTable({ columns, rows, isMock }) {
                   {columns.map((col) => (
                     <td key={col}>
                       {row[col] === null ? (
-                        <span className="text-[#1e1e32]">NULL</span>
+                        <span className="text-text-primary">NULL</span>
                       ) : (
                         String(row[col])
                       )}
@@ -177,11 +177,11 @@ export default function QueryConsole() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[16px] font-semibold text-[#e2e8f0] flex items-center gap-2">
-            <Terminal size={16} className="text-[#00d4ff]" />
+          <h2 className="text-[16px] font-semibold text-text-primary flex items-center gap-2">
+            <Terminal size={16} className="text-text-primary" />
             Query Console
           </h2>
-          <p className="text-[12px] text-[#475569] mt-0.5">
+          <p className="text-[12px] text-text-secondary mt-0.5">
             Run raw SQL against any Coral source ·{" "}
             <kbd className="font-mono text-[10px] bg-[#1e1e32] px-1.5 py-0.5 rounded">
               Ctrl+Enter
@@ -196,8 +196,8 @@ export default function QueryConsole() {
           onClick={toggleSchema}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-[12px] font-medium border transition-all ${
             showSchema
-              ? "bg-[#00d4ff15] border-[#00d4ff44] text-[#00d4ff]"
-              : "bg-[#0f0f1a] border-[#1e1e32] text-[#475569] hover:text-[#00d4ff] hover:border-[#00d4ff33]"
+                ? "bg-[#00d4ff15] border-[#00d4ff44] text-accent"
+                : "bg-[#0f0f1a] border-[#1e1e32] text-text-secondary hover:text-accent hover:border-accent/20"
           }`}
         >
           <Database size={13} />
@@ -208,7 +208,7 @@ export default function QueryConsole() {
       <div className="flex gap-5 flex-1 min-h-0">
         {/* Schema panel */}
         {showSchema && (
-          <div className="w-56 shrink-0 card p-3 flex flex-col gap-2 overflow-hidden">
+              <div className="w-56 shrink-0 card p-3 flex flex-col gap-2 overflow-hidden">
             <div className="relative">
               <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#475569]" />
               <input
@@ -216,7 +216,7 @@ export default function QueryConsole() {
                 value={schemaFilter}
                 onChange={(e) => setSchemaFilter(e.target.value)}
                 placeholder="Filter tables…"
-                className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-[#0a0a14] border border-[#1e1e32] text-[11px] font-mono text-[#e2e8f0] outline-none focus:border-[#00d4ff44] placeholder-[#475569]"
+                className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-[#0a0a14] border border-[#1e1e32] text-[11px] font-mono text-text-primary outline-none focus:border-accent placeholder-text-secondary"
               />
               {schemaFilter && (
                 <button
@@ -224,13 +224,13 @@ export default function QueryConsole() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#e2e8f0]"
                 >
                   <X size={10} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
+                <button
+                    key={table}
+                    onClick={() => onSelect(schemaName, table)}
+                    className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-[#00d4ff0a] hover:text-accent text-text-secondary transition-colors group"
+                  >
               {schemaLoading && (
-                <div className="space-y-2">
+                    <span className="font-mono text-[11px] group-hover:text-accent">{table}</span>
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="skeleton h-5 w-full rounded" />
                   ))}

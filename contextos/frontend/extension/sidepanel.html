@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ContextOS — Sidebar</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="panel">
+    <header>
+      <h2>ContextOS — Important</h2>
+      <div id="health" class="health">Checking backend…</div>
+    </header>
+    <main id="main">
+      <section id="focus-debt" class="card">
+        <h3>Focus Debt</h3>
+        <div id="focus-content">—</div>
+      </section>
+
+      <section id="top-signals" class="card">
+        <h3>Top Signals</h3>
+        <ul id="signals-list">Loading…</ul>
+      </section>
+
+      <section id="quick-actions" class="card">
+        <h3>Quick</h3>
+        <div class="actions">
+          <button id="open-briefing">Open Briefing</button>
+          <button id="open-focus">Open Focus</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

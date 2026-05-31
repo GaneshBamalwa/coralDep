@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 40%;
-  border-bottom: 1px solid #1e1e32;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   overflow: hidden;
 }
 
@@ -66,13 +66,15 @@
   margin: 4px 8px;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #1e1e32;
-  background: #0a0a14;
-  transition: border-color 0.15s;
+  border: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.18s;
 }
 
 .card:hover {
-  border-color: #1e1e4a;
+  border-color: rgba(0,212,255,0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.45);
 }
 
 .cardExpired {
@@ -169,7 +171,7 @@
 
 .ctrlBtn:hover {
   color: #e2e8f0;
-  background: #1e1e32;
+  background: rgba(255,255,255,0.02);
 }
 
 .skeleton {

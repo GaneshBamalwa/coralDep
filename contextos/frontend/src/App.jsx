@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sun, GitBranch, RefreshCcw, AlignLeft, Terminal, Cpu, CalendarDays,
 } from "lucide-react";
@@ -34,18 +34,18 @@ function Logo() {
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center"
         style={{
-          background: "linear-gradient(135deg, #00d4ff22 0%, #00d4ff44 100%)",
-          border: "1px solid #00d4ff44",
-          boxShadow: "0 0 16px #00d4ff22",
+          background: "linear-gradient(135deg, rgba(11,95,83,0.08) 0%, rgba(11,95,83,0.16) 100%)",
+          border: "1px solid rgba(11,95,83,0.12)",
+          boxShadow: "0 0 16px rgba(11,95,83,0.08)",
         }}
       >
-        <Cpu size={14} className="text-[#00d4ff]" />
+        <Cpu size={14} className="text-accent" />
       </div>
       <div>
-        <div className="font-mono text-[13px] font-bold text-[#e2e8f0] leading-none tracking-tight">
+        <div className="font-mono text-[13px] font-bold text-text-primary leading-none tracking-tight">
           ContextOS
         </div>
-        <div className="font-mono text-[9px] text-[#475569] mt-0.5 tracking-widest uppercase">
+        <div className="font-mono text-[9px] text-text-secondary mt-0.5 tracking-widest uppercase">
           Meridian
         </div>
       </div>
@@ -57,8 +57,8 @@ function Logo() {
 function Sidebar({ active, onChange }) {
   return (
     <aside
-      className="flex flex-col shrink-0 border-r border-[#1e1e32]"
-      style={{ width: 200, background: "#080810" }}
+      className="flex flex-col shrink-0 border-r border-bg-border glass-panel"
+      style={{ width: 200 }}
     >
       <Logo />
 
@@ -71,12 +71,12 @@ function Sidebar({ active, onChange }) {
             className={`nav-item ${active === id ? "active" : ""}`}
           >
             <Icon size={14} />
-            {label}
+            <span className="text-text-primary">{label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="pb-4 pt-2 border-t border-[#1e1e32] mt-4">
+      <div className="pb-4 pt-2 border-t border-bg-border mt-4">
         <SourceStatus />
       </div>
     </aside>
@@ -102,8 +102,8 @@ function MainPanel({ active }) {
 function RightPanel() {
   return (
     <aside
-      className="hidden md:flex flex-col shrink-0 border-l border-[#1e1e32] overflow-hidden"
-      style={{ width: 280, background: "#08080e" }}
+      className="hidden md:flex flex-col shrink-0 border-l border-bg-border overflow-hidden glass-panel"
+      style={{ width: 280 }}
     >
       <ErrorBoundary>
         <SignalStream />
@@ -121,23 +121,26 @@ function Header({ active }) {
   const Icon = item?.icon || Sun;
 
   return (
-    <div
-      className="flex items-center gap-3 px-6 py-3 border-b border-[#1e1e32] shrink-0"
-      style={{ background: "#09090f" }}
-    >
-      <Icon size={14} className="text-[#00d4ff]" />
-      <h1 className="text-[13px] font-semibold text-[#94a3b8]">
+      <div
+        className="flex items-center gap-3 px-6 py-3 border-b border-bg-border shrink-0 glass-strong"
+      >
+      <Icon size={14} className="text-accent" />
+      <h1 className="text-[13px] font-semibold text-text-secondary">
         {item?.label ?? "Dashboard"}
       </h1>
       <div className="flex-1" />
       {/* Cmd+K hint */}
-      <span className="hidden sm:flex items-center gap-1.5 font-mono text-[10px] text-[#2d3748]">
-        <kbd className="bg-[#1e1e32] px-1.5 py-0.5 rounded text-[9px]">⌘K</kbd>
-        lens
-      </span>
+      <div className="hidden md:flex items-center gap-3">
+        <div className="kbd-hint flex items-center gap-3">
+          <kbd style={{background:'transparent',border:'none',padding:0}}>⌘K</kbd>
+          <span className="text-text-primary">Press</span>
+          <span className="font-semibold text-text-primary">Ctrl/Cmd + K</span>
+          <span className="text-text-secondary">to open Lens</span>
+        </div>
+      </div>
       <div className="flex items-center gap-2 ml-3">
-        <span className="dot-pulse bg-[#10b981] w-[6px] h-[6px] rounded-full" />
-        <span className="font-mono text-[10px] text-[#475569]">LIVE</span>
+        <span className="dot-pulse bg-accent w-[6px] h-[6px] rounded-full" />
+        <span className="font-mono text-[10px] text-text-secondary">LIVE</span>
       </div>
     </div>
   );
@@ -145,13 +148,38 @@ function Header({ active }) {
 
 // ── Root App ───────────────────────────────────────────────────────────────
 export default function App() {
-  const [activePanel, setActivePanel] = useState("briefing");
+  // Read initial panel from URL query param `?panel=...` so the extension can open a specific view.
+  const initialPanel = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('panel')) || 'briefing';
+  const [activePanel, setActivePanel] = useState(initialPanel);
   const { isOpen: lensOpen, close: closeLen } = useLens();
+  const [backendUp, setBackendUp] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function check() {
+      try {
+        const res = await fetch("/api/health");
+        if (!mounted) return;
+        setBackendUp(res.ok);
+      } catch (e) {
+        if (!mounted) return;
+        setBackendUp(false);
+      }
+    }
+    check();
+    const iv = setInterval(check, 5000);
+    return () => { mounted = false; clearInterval(iv); };
+  }, []);
 
   return (
     <SignalsProvider>
       {/* Main layout — pb-8 reserves space for the 32px PulseBar */}
-      <div className="flex h-screen overflow-hidden pb-8" style={{ background: "#0a0a0f" }}>
+      {!backendUp && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-md text-sm font-mono text-[#ffe8e8] bg-[#5f001f] bg-opacity-90">
+          API unreachable — start the backend (npm run dev from contextos)
+        </div>
+      )}
+      <div className="flex h-screen overflow-hidden pb-8">
         {/* Left Sidebar */}
         <Sidebar active={activePanel} onChange={setActivePanel} />
 

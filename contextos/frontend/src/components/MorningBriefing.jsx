@@ -17,7 +17,7 @@ const SOURCE_COLORS = {
 
 // Signal type → accent colour mapping
 const SIGNAL_COLORS = {
-  MEETING_SOON:      { border: "#00d4ff", text: "#00d4ff", bg: "#00d4ff0d", dot: "#00d4ff" },
+  MEETING_SOON:      { border: "#0b5f53", text: "#0b5f53", bg: "#0b5f5315", dot: "#0b5f53" },
   BACK_TO_BACK:      { border: "#f59e0b", text: "#f59e0b", bg: "#f59e0b0d", dot: "#f59e0b" },
   MEETING_NO_AGENDA: { border: "#818cf8", text: "#818cf8", bg: "#818cf80d", dot: "#818cf8" },
   IMPORTANT_UNREAD:  { border: "#ef4444", text: "#ef4444", bg: "#ef44440d", dot: "#ef4444" },
@@ -32,7 +32,7 @@ const SIGNAL_COLORS = {
 // Removed BriefingSkeleton to render layout immediately and use inline skeletons
 
 function ClearLine() {
-  return <p className="text-[11px] text-[#2d3748] italic px-1">Clear.</p>;
+  return <p className="text-[11px] text-text-secondary italic px-1">Clear.</p>;
 }
 
 function SituationCard({ text, loading }) {
@@ -46,7 +46,7 @@ function SituationCard({ text, loading }) {
   if (!text || text === "Clear.") return <ClearLine />;
   return (
     <div className="w-full px-4 pt-4 pb-2 fade-in">
-      <p className="text-[15px] font-medium text-[#e2e8f0] leading-snug tracking-tight">
+      <p className="text-[15px] font-medium text-text-primary leading-snug tracking-tight">
         {text}
       </p>
     </div>
@@ -67,9 +67,9 @@ function BeforeYouStartCard({ items }) {
       </div>
       <ul className="space-y-2">
         {list.map((action, i) => (
-          <li key={i} className="flex items-start gap-2 group cursor-pointer">
+            <li key={i} className="flex items-start gap-2 group cursor-pointer">
             <span className="mt-0.5 w-4 h-4 rounded border border-[#3b82f640] flex-shrink-0 group-hover:border-[#3b82f6] transition-colors" />
-            <span className="text-[12px] text-[#94a3b8] leading-snug group-hover:text-[#e2e8f0] transition-colors">
+            <span className="text-[12px] text-text-secondary leading-snug group-hover:text-text-primary transition-colors">
               {action}
             </span>
           </li>
@@ -95,7 +95,7 @@ function WatchOutCard({ items }) {
         {list.map((risk, i) => (
           <li key={i} className="flex items-start gap-2">
             <span className="mt-1.5 w-1 h-1 rounded-full bg-[#f59e0b] flex-shrink-0" />
-            <span className="text-[12px] text-[#94a3b8] leading-snug">{risk}</span>
+            <span className="text-[12px] text-text-secondary leading-snug">{risk}</span>
           </li>
         ))}
       </ul>
@@ -108,8 +108,8 @@ function FocusWindowCard({ text, loading }) {
     return (
       <div className="mx-4 p-3 rounded-lg bg-[#00d4ff0a] border border-[#00d4ff28] glow-cyan fade-in">
         <div className="flex items-center gap-2 mb-1.5">
-          <Zap size={11} className="text-[#00d4ff]" />
-          <span className="text-[10px] font-mono font-bold text-[#00d4ff] tracking-widest uppercase">Best Focus Window</span>
+        <Zap size={11} className="text-text-primary" />
+        <span className="text-[10px] font-mono font-bold text-text-primary tracking-widest uppercase">Best Focus Window</span>
         </div>
         <div style={{ height: '1.2em', width: '60%', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
       </div>
@@ -128,9 +128,9 @@ function FocusWindowCard({ text, loading }) {
         </span>
       </div>
       {timeBlock && (
-        <div className="font-mono text-[16px] font-semibold text-[#00d4ff] mb-1">{timeBlock}</div>
+        <div className="font-mono text-[16px] font-semibold text-text-primary mb-1">{timeBlock}</div>
       )}
-      <p className="text-[12px] text-[#94a3b8] leading-relaxed">{rest || text}</p>
+      <p className="text-[12px] text-text-secondary leading-relaxed">{rest || text}</p>
     </div>
   );
 }
@@ -156,7 +156,7 @@ function OneThingCard({ text, loading }) {
           One Thing
         </span>
       </div>
-      <p className="text-[13px] font-semibold text-[#e2e8f0] leading-snug">{text}</p>
+      <p className="text-[13px] font-semibold text-text-primary leading-snug">{text}</p>
     </div>
   );
 }
@@ -169,11 +169,11 @@ function CalendarEvent({ event }) {
   const fmt = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return (
     <div className="flex items-start gap-3 py-2 border-b border-[#1e1e3240] last:border-0">
-      <div className="flex flex-col items-center min-w-[46px] font-mono text-[10px] text-[#00d4ff] leading-tight">
+      <div className="flex flex-col items-center min-w-[46px] font-mono text-[10px] text-text-primary leading-tight">
         <span>{fmt(start)}</span>
-        <span className="text-[#475569]">{fmt(end)}</span>
+        <span className="text-text-secondary">{fmt(end)}</span>
       </div>
-      <span className="text-[13px] text-[#94a3b8] leading-tight pt-0.5">{event.summary}</span>
+      <span className="text-[13px] text-text-secondary leading-tight pt-0.5">{event.summary}</span>
     </div>
   );
 }

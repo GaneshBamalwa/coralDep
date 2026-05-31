@@ -116,7 +116,7 @@ export default function MeridianLens({ isOpen, onClose, activeTab }) {
       <div className={css.palette} role="dialog" aria-modal="true" aria-label="Meridian Lens">
         {/* Header */}
         <div className={css.header}>
-          <Command size={13} style={{ color: "#00d4ff" }} />
+          <Command size={13} style={{ color: "var(--accent-cta)" }} />
           <span className={css.headerTitle}>Meridian Lens</span>
           <span className={css.escHint}>ESC</span>
         </div>

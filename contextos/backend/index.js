@@ -112,12 +112,22 @@ function runCoralQuery(sql, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
     const env = buildCoralEnv();
+    // Allow overriding coral command via env var if PATH isn't updated in the running process.
+    const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
+    const cmd = `${coralCmd} sql "${normalized}"`;
+    // Use shell=true on Windows so PATH updates from the environment are honored.
     exec(
-      `coral sql "${normalized}"`,
-      { timeout: timeoutMs, env, shell: false },
+      cmd,
+      { timeout: timeoutMs, env, shell: true },
       (err, stdout, stderr) => {
         if (err) {
           if (err.killed || err.signal === "SIGTERM") return reject(new Error("timeout"));
+          // Helpful ENOENT handling when the coral binary is not available
+          if (err.code === 'ENOENT' || /not recognized as an internal or external command/.test(stderr || '')) {
+            const msg = `coral command not found. Set CORAL_PATH to the full path to coral.exe or ensure coral is on PATH.`;
+            console.warn('[coral] ENOENT:', msg);
+            return reject(new Error(msg));
+          }
           return reject(new Error(stderr?.trim() || err.message));
         }
         resolve(stdout);

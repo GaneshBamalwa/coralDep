@@ -19,20 +19,20 @@ function StatusDot({ connected }) {
     return (
       <span
         className="dot-pulse w-[7px] h-[7px] rounded-full"
-        style={{ background: "#10b981", boxShadow: "0 0 6px #10b98166" }}
+        style={{ background: "rgba(16,185,129,1)", boxShadow: "0 0 6px rgba(16,185,129,0.35)" }}
       />
     );
   if (connected === false)
     return (
       <span
         className="w-[7px] h-[7px] rounded-full inline-block"
-        style={{ background: "#ef4444", boxShadow: "0 0 6px #ef444466" }}
+        style={{ background: "rgba(239,68,68,1)", boxShadow: "0 0 6px rgba(239,68,68,0.35)" }}
       />
     );
   return (
     <span
       className="w-[7px] h-[7px] rounded-full inline-block"
-      style={{ background: "#475569" }}
+      style={{ background: "rgba(71,85,105,1)" }}
     />
   );
 }

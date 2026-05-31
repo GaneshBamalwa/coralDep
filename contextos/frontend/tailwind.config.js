@@ -5,40 +5,25 @@ export default {
     extend: {
       colors: {
         bg: {
-          base: "#0a0a0f",
-          surface: "#0f0f1a",
-          elevated: "#151524",
-          border: "#1e1e32",
+          base: "#fbf8f3",
+          surface: "#ffffff",
+          elevated: "#f6f4ef",
+          border: "rgba(15,23,32,0.06)",
         },
-        cyan: {
-          DEFAULT: "#00d4ff",
-          dim: "#00d4ff22",
-          muted: "#00d4ff66",
-        },
-        amber: {
-          DEFAULT: "#f59e0b",
-          dim: "#f59e0b22",
-          muted: "#f59e0b66",
-        },
-        green: {
-          DEFAULT: "#10b981",
-          dim: "#10b98122",
-          muted: "#10b98166",
-        },
-        red: {
-          DEFAULT: "#ef4444",
-          dim: "#ef444422",
-          muted: "#ef444466",
+        accent: {
+          DEFAULT: "#0b5f53",
+          cta: "#0f7a64",
+          muted: "#6b6b6b",
         },
         text: {
-          primary: "#e2e8f0",
-          secondary: "#94a3b8",
-          muted: "#475569",
+          primary: "#0f1720",
+          secondary: "#6b6b6b",
         },
       },
       fontFamily: {
-        mono: ['"JetBrains Mono"', "monospace"],
+        display: ['"GT Canon VF Variable L Black"', 'Inter', 'sans-serif'],
         sans: ["Inter", "sans-serif"],
+        mono: ['"JetBrains Mono"', "monospace"],
       },
       animation: {
         shimmer: "shimmer 1.8s infinite linear",
