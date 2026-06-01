@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y curl
 
 # Install Coral CLI (local-first SQL runtime)
 RUN curl -fsSL https://withcoral.com/install.sh | sh
-ENV PATH="/root/.coral/bin:${PATH}"
+ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 COPY package*.json ./
