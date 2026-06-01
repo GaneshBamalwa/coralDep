@@ -4,8 +4,7 @@ import dotenv from "dotenv";
 import { exec } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { VertexAI } from "@google-cloud/vertexai";
-import { GoogleAuth } from "google-auth-library";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseCoralOutput } from "./coralParser.js";
 import { detectSignals }    from "./signals.js";
 import Groq from 'groq-sdk';
@@ -47,14 +46,11 @@ const GITHUB_ENABLED = process.env.GITHUB_ENABLED === "true";
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
 
-// ── Vertex AI setup ──────────────────────────────────────────────────────────
-const vertexAI = new VertexAI({
-  project: process.env.GCLOUD_PROJECT || "your-gcp-project-id",
-  location: process.env.GCLOUD_LOCATION || "us-central1",
-});
+// ── Gemini API setup ─────────────────────────────────────────────────────────
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
 
-const geminiModel = vertexAI.getGenerativeModel({
-  model: "gemini-2.5-pro",
+const geminiModel = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
 });
 
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
@@ -102,13 +98,13 @@ async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
       console.warn("[vertex] JSON parsing failed. Retrying once... Raw text was:", text);
       return generateBriefing(systemPrompt, userContext, retriesLeft - 1);
     }
-    console.error("[vertex] Failed to parse JSON response:", text);
+    console.error("[gemini] Failed to parse JSON response:", text);
     return {
       situation: "Briefing generation failed - model returned malformed response.",
       beforeYouStart: [],
       watchOut: [],
       bestFocusWindow: "Unable to determine.",
-      oneThing: "Check backend logs for Vertex AI errors.",
+      oneThing: "Check backend logs for Gemini API errors.",
     };
   }
 }
@@ -412,19 +408,18 @@ Rules:
       briefing = await generateBriefing(systemPrompt, context);
     } catch (e) {
       if (e.message?.includes("403")) {
-        console.error("[vertex] Permission denied - ensure Vertex AI API is enabled:");
-        console.error("[vertex] Run in PowerShell: gcloud services enable aiplatform.googleapis.com");
+        console.error("[gemini] Permission denied - check your GEMINI_API_KEY.");
       } else if (e.message?.includes("429")) {
-        console.error("[vertex] Quota exceeded - check your Vertex AI quota in GCP console");
+        console.error("[gemini] Quota exceeded - check your Gemini API limits.");
       } else {
-        console.error("[vertex] Unexpected error:", e.message);
+        console.error("[gemini] Unexpected error:", e.message);
       }
       briefing = {
         situation: "Briefing generation failed - check backend logs.",
         beforeYouStart: [],
         watchOut: [],
-        bestFocusWindow: "Unable to compute - Vertex AI error.",
-        oneThing: "Check backend logs for Vertex AI errors.",
+        bestFocusWindow: "Unable to compute - Gemini API error.",
+        oneThing: "Check backend logs for Gemini API errors.",
         synthesis_error: e.message,
       };
     }

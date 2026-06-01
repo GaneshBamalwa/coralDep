@@ -11,18 +11,15 @@
 
 import { exec }         from "child_process";
 import dotenv           from "dotenv";
-import { VertexAI }     from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseCoralOutput } from "./coralParser.js";
 
 dotenv.config({ path: "../.env" });
 
 // ── Gemini setup ─────────────────────────────────────────────────────────────
-const vertexAI = new VertexAI({
-  project:  process.env.GCLOUD_PROJECT  || "your-gcp-project-id",
-  location: process.env.GCLOUD_LOCATION || "us-central1",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
 
-export const geminiModel = vertexAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+export const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 /**
  * parseGeminiJSON — resilient JSON extractor.
