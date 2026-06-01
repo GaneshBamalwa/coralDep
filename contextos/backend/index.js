@@ -182,7 +182,7 @@ function initCoralSources() {
   }
 
   try {
-    const discordManifest = path.join(__dirname, "../sources/discord/manifest.yaml");
+    const discordManifest = path.join(__dirname, "discord_manifest.yaml");
     execSync(`${coralCmd} source add --file "${discordManifest}"`, { env, shell: true });
     console.log(`[coral] Custom Discord source registered.`);
   } catch (err) {
