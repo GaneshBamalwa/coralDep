@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -163,6 +163,33 @@ function buildCoralEnv() {
     ...(process.env.DISCORD_BOT_TOKEN           && { DISCORD_BOT_TOKEN:             process.env.DISCORD_BOT_TOKEN }),
   };
 }
+
+// ── Initialize Coral Sources for Production Deployment ───────────────────────
+function initCoralSources() {
+  if (MOCK_MODE) return;
+  const env = buildCoralEnv();
+  const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
+  const sources = ["github", "slack", "google_calendar", "notion", "gmail"];
+  
+  console.log("[coral] Initializing built-in sources...");
+  for (const source of sources) {
+    try {
+      execSync(`${coralCmd} source add ${source}`, { env, shell: true });
+      console.log(`[coral] Source '${source}' registered.`);
+    } catch (err) {
+      console.warn(`[coral] Failed to register source '${source}' (maybe missing env vars).`);
+    }
+  }
+
+  try {
+    const discordManifest = path.join(__dirname, "../sources/discord/manifest.yaml");
+    execSync(`${coralCmd} source add --file "${discordManifest}"`, { env, shell: true });
+    console.log(`[coral] Custom Discord source registered.`);
+  } catch (err) {
+    console.warn(`[coral] Failed to register custom Discord source.`);
+  }
+}
+initCoralSources();
 
 function runCoralQuery(sql, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
