@@ -3,8 +3,9 @@ FROM node:20-slim
 # Install curl (and anything else Coral needs)
 RUN apt-get update && apt-get install -y curl
 
-# INSTALL CORAL CLI HERE (replace with the actual install command from their docs)
-# RUN curl -fsSL https://coral.so/install.sh | bash
+# Install Coral CLI (local-first SQL runtime)
+RUN curl -fsSL https://withcoral.com/install.sh | sh
+ENV PATH="/root/.coral/bin:${PATH}"
 
 WORKDIR /app
 COPY package*.json ./
