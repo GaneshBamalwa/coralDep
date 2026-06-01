@@ -1,10 +1,14 @@
-# ContextOS
+# Meridian
 
-> **Retrieval-first personal intelligence dashboard powered by Coral's SQL runtime.**
+[![React](https://img.shields.io/badge/React-18-blue.svg?style=for-the-badge&logo=react)](#)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF.svg?style=for-the-badge&logo=vite)](#)
+[![Node.js](https://img.shields.io/badge/Node.js-20-43853D.svg?style=for-the-badge&logo=node.js)](#)
+[![Express](https://img.shields.io/badge/Express-4.x-000000.svg?style=for-the-badge&logo=express)](#)
+[![Coral](https://img.shields.io/badge/Coral-SQL_Runtime-FF4F00.svg?style=for-the-badge)](#)
+[![Vertex AI](https://img.shields.io/badge/Vertex_AI-Gemini_2.5-4285F4.svg?style=for-the-badge&logo=googlecloud)](#)
+[![Groq](https://img.shields.io/badge/Groq-Llama_3-f55036.svg?style=for-the-badge)](#)
 
-ContextOS pulls fragmented workflow data — calendar, tasks, GitHub, Slack, Discord — into a single operational command center. No chat interface, no "Ask AI" box. Just a dense, beautiful dashboard that shows you exactly where your attention is going.
-
-![ContextOS Dashboard](./docs/screenshot.png)
+Meridian (formerly ContextOS) is a retrieval-first personal intelligence dashboard. It unifies fragmented workflow data across platforms like Calendar, GitHub, Slack, Notion, and Discord into a single, beautifully designed operational command center. It leverages advanced LLM synthesis to provide actionable morning briefings, focus debt analysis, and a unified context timeline.
 
 ---
 
@@ -120,38 +124,34 @@ coral source add google_calendar
 coral source add notion
 ```
 
-### Adding the Discord custom source
+    For the custom Discord integration:
+    ```bash
+    # Linux/macOS
+    cp -r sources/discord/ ~/.coral/workspaces/default/sources/discord/
+    
+    # Windows (PowerShell)
+    Copy-Item -Recurse sources\discord\ "$env:USERPROFILE\.coral\workspaces\default\sources\discord\"
+    
+    coral source add --file sources/discord/manifest.yaml
+    ```
+    Ensure you export `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` in your environment. Detailed instructions are available in `sources/discord/README.md`.
 
-```bash
-# Copy the spec into your Coral workspace
-# Linux/macOS:
-cp -r sources/discord/ ~/.coral/workspaces/default/sources/discord/
+4.  **Start the Application**
 
-# Windows (PowerShell):
-Copy-Item -Recurse sources\discord\ "$env:USERPROFILE\.coral\workspaces\default\sources\discord\"
-
-# Register it
-coral source add --file sources/discord/manifest.yaml
-
-# Set credentials
-export DISCORD_BOT_TOKEN=your_bot_token
-export DISCORD_GUILD_ID=your_server_id
-```
-
-See [`sources/discord/README.md`](./sources/discord/README.md) for detailed Discord bot setup, required permissions, and example queries.
-
-### Verify sources
-
-```bash
-coral source list
-coral sql "SELECT summary, start FROM google_calendar.events WHERE date(start) = current_date LIMIT 5"
-```
+    From the root `contextos` directory:
+    ```bash
+    # Start both backend and frontend concurrently
+    npm run dev
+    ```
+    
+    *   **Frontend:** http://localhost:5173
+    *   **Backend:** http://localhost:3001
 
 ---
 
-## API Endpoints
+## API Reference
 
-| Method | Path | Description |
+| Endpoint | Method | Description |
 |---|---|---|
 | `POST` | `/api/query` | Run raw Coral SQL |
 | `GET` | `/api/briefing` | Morning briefing via Vertex AI + all sources |
@@ -176,61 +176,14 @@ coral sql "SELECT summary, start FROM google_calendar.events WHERE date(start) =
 
 ## Design System
 
-| Token | Value | Use |
-|---|---|---|
-| Background base | `#0a0a0f` | App background |
-| Surface | `#0f0f1a` | Cards, panels |
-| Accent cyan | `#00d4ff` | Urgency, interactive |
-| Amber | `#f59e0b` | Warnings, loops |
-| Green | `#10b981` | Healthy states |
-| Font — data | JetBrains Mono | Numbers, SQL, timestamps |
-| Font — labels | Inter | UI text |
+The application utilizes a professional, clean interface optimized for data density and quick scanning. 
 
----
-
-## Development
-
-```bash
-# Backend only
-cd backend && npm run dev
-
-# Frontend only
-cd frontend && npm run dev
-
-# Both together (from root)
-npm run dev
-```
-
----
-
-## Discord Source: Supported Queries
-
-```sql
--- All guilds the bot is in
-SELECT id, name, member_count FROM discord.guilds;
-
--- Channels in a server
-SELECT id, name, type, topic FROM discord.channels WHERE guild_id = '123...';
-
--- Recent messages
-SELECT author_username, content, timestamp
-FROM discord.channel_messages(channel_id => '456...', limit => 20)
-ORDER BY timestamp DESC;
-
--- Mentions only
-SELECT author_username, content, timestamp
-FROM discord.mentions
-WHERE channel_id = '456...'
-ORDER BY timestamp DESC LIMIT 10;
-
--- Search across a guild
-SELECT author_username, content, timestamp
-FROM discord.search_guild_messages(guild_id => '123...', query => 'deployment')
-ORDER BY timestamp DESC;
-```
-
----
+| Element | Description |
+|---|---|
+| **Typography** | Inter (UI components), JetBrains Mono (Data tables, Code blocks) |
+| **Color Palette** | Slate/White base, Accent Blue for primary actions, Amber for warnings, Emerald for success states. |
+| **Components** | Tailwind CSS custom utility classes, Glassmorphism panels, Micro-animations (glow, pulse, fade-in). |
 
 ## License
 
-MIT
+This project is licensed under the MIT License.

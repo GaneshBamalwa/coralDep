@@ -58,7 +58,7 @@ function BeforeYouStartCard({ items }) {
   if (items === "Clear." || (Array.isArray(items) && items[0] === "Clear.")) return <ClearLine />;
   const list = Array.isArray(items) ? items : [items];
   return (
-    <div className="mx-4 p-3 rounded-lg bg-[#0f1a2e] border border-[#1e3a5f40] fade-in">
+    <div className="mx-4 p-3 rounded-lg bg-[#eff6ff] border border-[#bfdbfe] fade-in shadow-sm">
       <div className="flex items-center gap-2 mb-2">
         <CheckSquare size={11} className="text-[#3b82f6]" />
         <span className="text-[10px] font-mono font-bold text-[#3b82f6] tracking-widest uppercase">
@@ -68,7 +68,7 @@ function BeforeYouStartCard({ items }) {
       <ul className="space-y-2">
         {list.map((action, i) => (
             <li key={i} className="flex items-start gap-2 group cursor-pointer">
-            <span className="mt-0.5 w-4 h-4 rounded border border-[#3b82f640] flex-shrink-0 group-hover:border-[#3b82f6] transition-colors" />
+            <span className="mt-0.5 w-4 h-4 rounded border border-blue-300 bg-white flex-shrink-0 group-hover:border-blue-500 transition-colors" />
             <span className="text-[12px] text-text-secondary leading-snug group-hover:text-text-primary transition-colors">
               {action}
             </span>
@@ -168,7 +168,7 @@ function CalendarEvent({ event }) {
   const end   = new Date(typeof rawEnd   === "string" ? rawEnd.replace(/Z$/, "")   : rawEnd);
   const fmt = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-[#1e1e3240] last:border-0">
+    <div className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
       <div className="flex flex-col items-center min-w-[46px] font-mono text-[10px] text-text-primary leading-tight">
         <span>{fmt(start)}</span>
         <span className="text-text-secondary">{fmt(end)}</span>
@@ -236,9 +236,9 @@ function ChatPanel({ initialSignal, onClose }) {
   };
 
   return (
-    <div className="mx-4 mb-4 rounded-xl border border-[#1e1e32] bg-[#0a0a14] flex flex-col overflow-hidden fade-in" style={{ maxHeight: 380 }}>
+    <div className="mx-4 mb-4 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col overflow-hidden fade-in" style={{ maxHeight: 380 }}>
       {/* Chat header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e32] shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles size={11} className="text-[#00d4ff]" />
           <span className="text-[11px] font-mono font-bold text-[#00d4ff] uppercase tracking-widest">
@@ -263,8 +263,8 @@ function ChatPanel({ initialSignal, onClose }) {
             <div
               className={`max-w-[85%] px-3 py-2 rounded-xl text-[12px] leading-relaxed ${
                 msg.role === "user"
-                  ? "bg-[#00d4ff18] border border-[#00d4ff28] text-[#e2e8f0] rounded-br-sm"
-                  : "bg-[#151524] border border-[#1e1e32] text-[#94a3b8] rounded-bl-sm"
+                  ? "bg-blue-50 border border-blue-100 text-slate-800 rounded-br-sm"
+                  : "bg-gray-50 border border-gray-200 text-slate-700 rounded-bl-sm"
               }`}
             >
               {msg.content}
@@ -274,7 +274,7 @@ function ChatPanel({ initialSignal, onClose }) {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-[#151524] border border-[#1e1e32] px-3 py-2 rounded-xl rounded-bl-sm flex items-center gap-1.5">
+            <div className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl rounded-bl-sm flex items-center gap-1.5">
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
@@ -297,7 +297,7 @@ function ChatPanel({ initialSignal, onClose }) {
       </div>
 
       {/* Input row */}
-      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-[#1e1e32]">
+      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-gray-200">
         <textarea
           id="chat-input"
           rows={1}
@@ -305,7 +305,7 @@ function ChatPanel({ initialSignal, onClose }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
           placeholder="Follow up…"
-          className="flex-1 bg-transparent border-none outline-none resize-none text-[12px] font-mono text-[#e2e8f0] placeholder-[#2d3748] leading-relaxed"
+          className="flex-1 bg-transparent border-none outline-none resize-none text-[12px] font-mono text-slate-800 placeholder-slate-400 leading-relaxed"
           style={{ maxHeight: 72 }}
         />
         <button
@@ -313,9 +313,9 @@ function ChatPanel({ initialSignal, onClose }) {
           onClick={handleSend}
           disabled={!input.trim() || loading}
           className="shrink-0 p-1.5 rounded-lg transition-all disabled:opacity-30"
-          style={{ background: input.trim() && !loading ? "#00d4ff" : "#1e1e32" }}
+          style={{ background: input.trim() && !loading ? "#3b82f6" : "#f1f5f9" }}
         >
-          <Send size={11} style={{ color: input.trim() && !loading ? "#0a0a0f" : "#475569" }} />
+          <Send size={11} style={{ color: input.trim() && !loading ? "white" : "#94a3b8" }} />
         </button>
       </div>
     </div>
@@ -400,7 +400,7 @@ export default function MorningBriefing() {
         </div>
       </div>
 
-      <div className="h-px bg-[#1e1e32] mx-4 my-1" />
+      <div className="h-px bg-gray-200 mx-4 my-1" />
 
       {/* Errors */}
       {error && (
@@ -427,7 +427,7 @@ export default function MorningBriefing() {
       {(loading || briefing) && (
         <div className="flex flex-col gap-3 pb-3 fade-in">
           <SituationCard    text={briefing?.situation} loading={loading && !data} />
-          <div className="h-px bg-[#1e1e32] mx-4" />
+          <div className="h-px bg-gray-200 mx-4" />
           {!loading && briefing?.beforeYouStart && <BeforeYouStartCard items={briefing.beforeYouStart} />}
           {!loading && briefing?.watchOut && <WatchOutCard items={briefing.watchOut} />}
           <FocusWindowCard    text={briefing?.bestFocusWindow} loading={loading && !data} />
@@ -438,7 +438,7 @@ export default function MorningBriefing() {
       {/* ── Signals ──────────────────────────────────────────────────── */}
       {signals.length > 0 && (
         <div className="mx-4 mb-3 fade-in">
-          <div className="h-px bg-[#1e1e32] mb-3" />
+          <div className="h-px bg-gray-200 mb-3" />
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare size={11} className="text-[#00d4ff]" />
             <span className="text-[10px] font-mono font-bold text-[#475569] uppercase tracking-widest">
@@ -469,7 +469,7 @@ export default function MorningBriefing() {
 
       {/* Calendar Events — pinned to bottom */}
       <div className="mt-auto px-4 pb-4">
-        <div className="h-px bg-[#1e1e32] mb-3" />
+        <div className="h-px bg-gray-200 mb-3" />
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] font-mono text-[#475569] uppercase tracking-widest">
             Today's Schedule

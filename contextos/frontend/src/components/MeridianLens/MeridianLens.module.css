@@ -27,6 +27,9 @@
   box-shadow: 0 28px 80px var(--shadow-soft), 0 0 0 1px rgba(255,255,255,0.18);
   overflow: hidden;
   animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
 }
 
 @keyframes slideDown {
@@ -130,6 +133,9 @@
 
 .inputArea {
   padding: 10px 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .inputRow {
@@ -140,6 +146,7 @@
   border: 1px solid rgba(11,95,83,0.12);
   border-radius: 8px;
   padding: 8px 12px;
+  flex: 1;
   transition: border-color 0.15s;
 }
 
@@ -177,6 +184,37 @@
   border: 1px solid rgba(11,95,83,0.1);
   max-height: 220px;
   overflow-y: auto;
+}
+
+.markdownText p {
+  margin-bottom: 0.5rem;
+}
+.markdownText p:last-child {
+  margin-bottom: 0;
+}
+.markdownText strong {
+  font-weight: 600;
+  color: #fff;
+}
+.markdownText ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdownText ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdownText li {
+  margin-bottom: 0.25rem;
+}
+.markdownText a {
+  color: var(--accent-cta);
+  text-decoration: none;
+}
+.markdownText a:hover {
+  text-decoration: underline;
 }
 
 .responseText {

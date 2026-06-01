@@ -19,12 +19,12 @@ import { coralApiUrl } from "./lib/coralApi";
 
 // ── Nav items ──────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "briefing",  label: "Briefing",  icon: Sun },
-  { id: "today_tab", label: "TODAY",     icon: CalendarDays },
-  { id: "today",     label: "Focus",     icon: RefreshCcw },
-  { id: "loops",     label: "Loops",     icon: GitBranch },
-  { id: "timeline",  label: "Timeline",  icon: AlignLeft },
-  { id: "console",   label: "Console",   icon: Terminal },
+  { id: "briefing", label: "Briefing", icon: Sun },
+  { id: "today_tab", label: "TODAY", icon: CalendarDays },
+  { id: "today", label: "Focus", icon: RefreshCcw },
+  { id: "loops", label: "Loops", icon: GitBranch },
+  { id: "timeline", label: "Timeline", icon: AlignLeft },
+  { id: "console", label: "Console", icon: Terminal },
 ];
 
 // ── Logo ───────────────────────────────────────────────────────────────────
@@ -87,13 +87,13 @@ function Sidebar({ active, onChange }) {
 function MainPanel({ active }) {
   let content;
   switch (active) {
-    case "briefing":  content = <MorningBriefing />; break;
-    case "today_tab": content = <TodayTab />;        break;
-    case "today":     content = <FocusDebt />;       break;
-    case "loops":     content = <UnfinishedLoops />; break;
-    case "timeline":  content = <ContextTimeline />; break;
-    case "console":   content = <QueryConsole />;    break;
-    default:          content = <FocusDebt />;       break;
+    case "briefing": content = <MorningBriefing />; break;
+    case "today_tab": content = <TodayTab />; break;
+    case "today": content = <FocusDebt />; break;
+    case "loops": content = <UnfinishedLoops />; break;
+    case "timeline": content = <ContextTimeline />; break;
+    case "console": content = <QueryConsole />; break;
+    default: content = <FocusDebt />; break;
   }
   return <ErrorBoundary key={active}>{content}</ErrorBoundary>;
 }
@@ -226,11 +226,13 @@ export default function App() {
       </div>
 
       {/* Meridian Lens — always mounted, rendered when isOpen */}
-      <MeridianLens
-        isOpen={lensOpen}
-        onClose={closeLen}
-        activeTab={activePanel}
-      />
+      <ErrorBoundary>
+        <MeridianLens
+          isOpen={lensOpen}
+          onClose={closeLen}
+          activeTab={activePanel}
+        />
+      </ErrorBoundary>
 
       {/* Pulse Bar — fixed bottom, always visible */}
       <PulseBar />
