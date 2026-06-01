@@ -53,6 +53,48 @@ const geminiModel = genAI.getGenerativeModel({
   model: "gemini-2.5-flash",
 });
 
+// ── Google OAuth Auto-Refresh ────────────────────────────────────────────────
+let isRefreshing = false;
+async function refreshGoogleToken() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) return;
+  if (isRefreshing) return;
+
+  isRefreshing = true;
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+    
+    const data = await response.json();
+    if (data.access_token) {
+      console.log("[auth] Successfully refreshed Google OAuth access token");
+      process.env.GMAIL_ACCESS_TOKEN = data.access_token;
+      process.env.GOOGLE_CALENDAR_ACCESS_TOKEN = data.access_token;
+    } else {
+      console.error("[auth] Failed to refresh token:", data);
+    }
+  } catch (err) {
+    console.error("[auth] Error refreshing token:", err);
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+// Run immediately, then every 45 minutes to keep it fresh
+refreshGoogleToken();
+setInterval(refreshGoogleToken, 45 * 60 * 1000);
+
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
   const request = {
     contents: [
