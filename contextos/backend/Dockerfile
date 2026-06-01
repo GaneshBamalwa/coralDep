@@ -1,7 +1,11 @@
-FROM node:20-slim
+FROM ubuntu:24.04
 
-# Install curl (and anything else Coral needs)
-RUN apt-get update && apt-get install -y curl
+# Install curl and ca-certificates
+RUN apt-get update && apt-get install -y curl ca-certificates
+
+# Install Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
 # Install Coral CLI (local-first SQL runtime)
 RUN curl -fsSL https://withcoral.com/install.sh | sh
