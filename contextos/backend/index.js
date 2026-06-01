@@ -92,7 +92,6 @@ async function refreshGoogleToken() {
 }
 
 // Run immediately, then every 45 minutes to keep it fresh
-refreshGoogleToken();
 setInterval(refreshGoogleToken, 45 * 60 * 1000);
 
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
@@ -165,8 +164,9 @@ function buildCoralEnv() {
 }
 
 // ── Initialize Coral Sources for Production Deployment ───────────────────────
-function initCoralSources() {
+async function initCoralSources() {
   if (MOCK_MODE) return;
+  await refreshGoogleToken();
   const env = buildCoralEnv();
   const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
   const sources = ["github", "slack", "google_calendar", "notion", "gmail"];

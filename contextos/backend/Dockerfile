@@ -17,4 +17,4 @@ RUN npm install
 COPY . .
 
 EXPOSE 3001
-CMD ["node", "--max-old-space-size=256", "index.js"]
+CMD ["node", "--dns-result-order=ipv4first", "--max-old-space-size=256", "index.js"]
