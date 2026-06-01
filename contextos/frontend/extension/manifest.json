@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ContextOS Sidebar",
-  "description": "Quick access to ContextOS panels (opens local app).",
+  "name": "Meridian Sidebar",
+  "description": "Quick access to Meridian panels (opens local app).",
   "version": "0.1.0",
   "action": {
     "default_popup": "popup.html",
@@ -16,6 +16,6 @@
   "permissions": ["tabs"],
   "host_permissions": [
     "http://localhost:5173/*",
-    "http://localhost:3001/*"
+    "https://coraldep.onrender.com/*"
   ]
 }

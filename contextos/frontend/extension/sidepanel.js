@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001';
+const API_BASE = 'https://coraldep.onrender.com';
 
 async function fetchJSON(path){
   try{

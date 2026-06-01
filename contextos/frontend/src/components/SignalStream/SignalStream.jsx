@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Radio } from "lucide-react";
 import css from "./SignalStream.module.css";
+import { coralApiUrl } from "../../lib/coralApi";
 
 const DOT_COLOR = { red: "#E53E3E", amber: "#DD6B20", blue: "#3182CE", green: "#38A169" };
 
@@ -36,7 +37,7 @@ export default function SignalStream() {
 
   const fetchCards = useCallback(async () => {
     try {
-      const res  = await fetch("/api/stream");
+      const res  = await fetch(coralApiUrl("/api/stream"));
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setCards(json.cards || []);
@@ -58,14 +59,14 @@ export default function SignalStream() {
     // Optimistic update
     setCards(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
     try {
-      await fetch(`/api/stream/${id}/pin`, { method: "POST" });
+      await fetch(coralApiUrl(`/api/stream/${id}/pin`), { method: "POST" });
     } catch {}
   }, []);
 
   const handleDismiss = useCallback(async (id) => {
     setCards(prev => prev.filter(c => c.id !== id));
     try {
-      await fetch(`/api/stream/${id}`, { method: "DELETE" });
+      await fetch(coralApiUrl(`/api/stream/${id}`), { method: "DELETE" });
     } catch {}
   }, []);
 

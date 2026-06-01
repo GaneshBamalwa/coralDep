@@ -1,6 +1,6 @@
-# ContextOS (Coral Hackathon)
+# Meridian (Coral Hackathon)
 
-ContextOS is a premium, real-time workflow intelligence dashboard built during the Coral Hackathon. It connects scattered work and communication platforms (Google Calendar, Gmail, Notion, Slack, Discord, and GitHub) through the **Coral SQL CLI**, aggregates that raw data, and uses an advanced **LLM Orchestration Layer (OpenRouter / Llama 3.3 70b)** to synthesize a highly personalized, actionable Morning Briefing.
+Meridian is a premium, real-time workflow intelligence dashboard built during the Coral Hackathon. It connects scattered work and communication platforms (Google Calendar, Gmail, Notion, Slack, Discord, and GitHub) through the **Coral SQL CLI**, aggregates that raw data, and uses an advanced **LLM Orchestration Layer (OpenRouter / Llama 3.3 70b)** to synthesize a highly personalized, actionable Morning Briefing.
 
 It includes visual productivity charts like Focus Debt, Unfinished Loops, and a Unified Timeline.
 
@@ -74,7 +74,7 @@ npm run dev
 > **Note on Windows Security**: The backend injects OAuth/API tokens directly into process memory (`shell: false`) to safely bypass Windows Credential Manager/Keychain lockouts when interacting with the Coral CLI.
 
 ## 🛡 Graceful Degradation
-ContextOS features robust error boundaries and state management. If an integration (like GitHub) is disabled or encounters a rate limit, the API dynamically handles timeouts (15s limit) and the frontend elegantly falls back to a warning state without breaking the application layout.
+Meridian features robust error boundaries and state management. If an integration (like GitHub) is disabled or encounters a rate limit, the API dynamically handles timeouts (15s limit) and the frontend elegantly falls back to a warning state without breaking the application layout.
 
 ## 📄 License
 MIT License

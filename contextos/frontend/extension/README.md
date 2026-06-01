@@ -1,4 +1,4 @@
-ContextOS Extension
+Meridian Extension
 
 How to load the extension in Chrome / Edge (unpacked):
 
@@ -9,5 +9,5 @@ How to load the extension in Chrome / Edge (unpacked):
 5. Click the extension icon; the popup opens. Use the buttons to open specific panels in the app (they add `?panel=...`).
 
 Notes:
-- The popup attempts to fetch `http://localhost:3001/api/health` to show backend status. Ensure the backend is running and accessible.
+- The popup attempts to fetch `https://coraldep.onrender.com/api/health` to show backend status.
 - If your Vite dev server runs on a different port, update `APP_BASE` in `popup.js`.

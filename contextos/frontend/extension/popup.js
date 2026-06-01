@@ -1,5 +1,6 @@
 const APP_BASE = 'http://localhost:5173/';
-const API_HEALTH = 'http://localhost:3001/api/health';
+const API_BASE = 'https://coraldep.onrender.com';
+const API_HEALTH = `${API_BASE}/api/health`;
 
 function openPanel(panel){
   const url = APP_BASE + (panel ? `?panel=${encodeURIComponent(panel)}` : '');

@@ -15,6 +15,7 @@ import PulseBar         from "./components/PulseBar/PulseBar";
 import { ErrorBoundary }  from "./components/ErrorBoundary";
 import { SignalsProvider } from "./contexts/SignalsContext";
 import { useLens }        from "./hooks/useLens";
+import { coralApiUrl } from "./lib/coralApi";
 
 // ── Nav items ──────────────────────────────────────────────────────────────
 const NAV = [
@@ -42,7 +43,7 @@ function Logo() {
       </div>
       <div>
         <div className="font-mono text-[13px] font-bold text-text-primary leading-none tracking-tight">
-          ContextOS
+          Meridian
         </div>
         <div className="font-mono text-[9px] text-text-secondary mt-0.5 tracking-widest uppercase">
           Meridian
@@ -175,19 +176,19 @@ export default function App() {
   const [backendUp, setBackendUp] = useState(true);
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "light";
-    return localStorage.getItem("contextos-theme") || "light";
+    return localStorage.getItem("meridian-theme") || localStorage.getItem("contextos-theme") || "light";
   });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("contextos-theme", theme);
+    localStorage.setItem("meridian-theme", theme);
   }, [theme]);
 
   useEffect(() => {
     let mounted = true;
     async function check() {
       try {
-        const res = await fetch("/api/health");
+        const res = await fetch(coralApiUrl("/api/health"));
         if (!mounted) return;
         setBackendUp(res.ok);
       } catch (e) {
@@ -205,7 +206,7 @@ export default function App() {
       {/* Main layout — pb-8 reserves space for the 32px PulseBar */}
       {!backendUp && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-md text-sm font-mono text-[#ffe8e8] bg-[#5f001f] bg-opacity-90">
-          API unreachable — start the backend (npm run dev from contextos)
+          API unreachable — start the Meridian backend
         </div>
       )}
       <div className="flex h-screen overflow-hidden pb-8">

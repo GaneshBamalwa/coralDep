@@ -1,11 +1,14 @@
-:root{--accent:#0b5f53;--accent-cta:#0f7a64;--muted:#6b6b6b;--bg:#fbf8f3;--border:rgba(15,23,32,0.08)}
-body{font-family:"GT Canon VF Variable L Black",sans-serif;margin:0;padding:12px;background:var(--bg);color:#0f1720}
-.panel header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.panel header h2{margin:0;font-size:14px}
-.health{font-size:12px;color:var(--muted)}
-.card{background:rgba(255,255,255,0.72);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:10px}
-.card h3{margin:0 0 6px 0;font-size:12px}
-#signals-list{list-style:none;padding:0;margin:0}
-#signals-list li{padding:6px 4px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.72)}
-.actions{display:flex;gap:6px}
-.actions button{flex:1;padding:8px;border-radius:6px;border:none;background:var(--accent);color:#fff}
+:root{--accent:#0b5f53;--accent-cta:#0f7a64;--muted:#6b6b6b;--bg:#fbf8f3;--border:rgba(15,23,32,0.08);--surface:rgba(255,255,255,0.76);--surface-strong:rgba(255,255,255,0.9)}
+body{font-family:"GT Canon VF Variable L Black",sans-serif;margin:0;padding:14px;background:linear-gradient(180deg,#fefcf8, #f7f4ee);color:#0f1720}
+.panel{display:flex;flex-direction:column;gap:10px}
+.panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;padding:8px 2px}
+.panel header h2{margin:2px 0 0;font-size:16px;font-weight:700;letter-spacing:-0.02em}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+.health{font-size:11px;color:var(--muted);padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 10px 24px rgba(15,23,32,0.04)}
+.card h3{margin:0 0 8px 0;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)}
+#signals-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+#signals-list li{padding:8px 10px;border-radius:10px;background:var(--surface-strong);border:1px solid rgba(15,23,32,0.05)}
+.actions{display:flex;gap:8px}
+.actions button{flex:1;padding:10px 12px;border-radius:999px;border:1px solid rgba(11,95,83,0.14);background:rgba(11,95,83,0.06);color:var(--accent);font-weight:700}
+.actions a{display:flex;align-items:center;justify-content:center;flex:1;padding:10px 12px;border-radius:999px;border:1px solid rgba(15,23,32,0.08);background:var(--surface);color:var(--muted);text-decoration:none;font-weight:600}
