@@ -11,6 +11,23 @@ Meridian is a premium, real-time workflow intelligence tool built during the **C
 
 ---
 
+## 🧰 Tools Built During the Hackathon
+
+- **Meridian Dashboard** — Core multi-source workflow intelligence app (briefing, timeline, focus debt, loops, SQL console).  
+  [`/contextos`](./contextos)
+- **Meridian Lens** — Command-palette style assistant (Ctrl/Cmd + K) for suggested actions and natural-language queries.  
+  [`frontend Meridian Lens`](./contextos/frontend/src/components/MeridianLens/MeridianLens.jsx) · [`backend Lens API`](./contextos/backend/lens.js)
+- **Meridian Sidebar (Browser Extension)** — Quick-access browser extension that opens specific Meridian panels directly from Chrome/Edge.  
+  [`extension folder`](./contextos/frontend/extension) · [`setup guide`](./contextos/frontend/extension/README.md)
+- **Chromium Browser Data Source Bridge** — Local browser data server + Coral manifest to query bookmarks, history, downloads, tabs, top sites, and extensions for Chrome/Edge/Brave.  
+  [`browser_server.py`](./contextos/browser_server.py) · [`manifest`](./contextos/manifest.yaml)
+- **Discord Coral Source** — Custom Coral source exposing Discord guilds, channels, messages, and members as SQL tables.  
+  [`source docs`](./contextos/sources/discord/README.md) · [`manifest`](./contextos/sources/discord/manifest.yaml)
+- **Slack Messages Coral Source** — Custom Coral source for Slack channels, messages, and unread-channel intelligence via SQL.  
+  [`manifest`](./contextos/sources/slack_messages/manifest.yaml)
+
+---
+
 ## 🚀 Features
 
 - **Morning Briefing** : AI-powered synthesis of your most urgent tasks, stale loops, and optimal focus blocks, drawn from live data across Calendar, Gmail, Slack, and Notion.
