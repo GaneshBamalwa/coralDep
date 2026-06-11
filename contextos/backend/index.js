@@ -1077,7 +1077,6 @@ function buildFallbackBriefing(sources) {
 
 // ── Startup validation ─────────────────────────────────────────────────────
 function validateEnv() {
-  const vertex = getVertexStatus();
   const tokens = {
     GMAIL_ACCESS_TOKEN:           process.env.GMAIL_ACCESS_TOKEN,
     GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN,
@@ -1088,28 +1087,19 @@ function validateEnv() {
   for (const [key, val] of Object.entries(tokens)) {
     console.log(`   [${val ? "✓" : "!"}] ${key} is ${val ? "present" : "missing"}`);
   }
-  if (!vertex.project) {
-    console.warn("[env] WARNING: GCLOUD_PROJECT not set - Vertex AI calls will fail");
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn("[env] WARNING: GEMINI_API_KEY not set - AI calls will fail");
+  } else {
+    console.log(`   [✓] GEMINI_API_KEY is present`);
   }
-  console.log(`   [${vertex.project ? "✓" : "!"}] VERTEX_PROJECT is ${vertex.project || "missing"}`);
-  console.log(`   [✓] VERTEX_LOCATION is ${vertex.location}`);
-  console.log(`   [✓] VERTEX_MODEL is ${vertex.model}`);
-}
-
-async function checkADC() {
-  try {
-    const auth   = new GoogleAuth();
-    const client = await auth.getClient();
-    const token  = await client.getAccessToken();
-    if (token) console.log("[gcloud] ADC credentials valid ✓");
-  } catch (e) {
-    console.error("[gcloud] ADC credentials not found");
-    console.error("[gcloud] Run in PowerShell: gcloud auth application-default login");
+  if (!process.env.GROQ_API_KEY) {
+    console.warn("[env] WARNING: GROQ_API_KEY not set - Meridian Lens will fail");
+  } else {
+    console.log(`   [✓] GROQ_API_KEY is present`);
   }
 }
 
 validateEnv();
-checkADC();
 
 // ── Meridian API routes ───────────────────────────────────────────────────────
 app.use("/api/pulse",       pulseRouter);
