@@ -1,6 +1,4 @@
-# Meridian Extension
-
-[![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-v3-4285F4.svg?style=for-the-badge&logo=googlechrome)](#)
+Meridian Extension
 
 How to load the extension in Chrome or Edge (unpacked):
 
@@ -10,7 +8,6 @@ How to load the extension in Chrome or Edge (unpacked):
 4.  Click "Load unpacked" and select this folder: `contextos/frontend/extension`.
 5.  Click the extension icon to open the popup. Use the navigation buttons to open specific panels in the application (these append a `?panel=` query parameter to the URL).
 
-## Notes
-
-*   The popup automatically checks `http://localhost:3001/api/health` to verify the backend status. Ensure the backend is running and accessible.
-*   If your Vite development server runs on a different port, update the `APP_BASE` variable in `popup.js`.
+Notes:
+- The popup attempts to fetch `https://coraldep.onrender.com/api/health` to show backend status.
+- If your Vite dev server runs on a different port, update `APP_BASE` in `popup.js`.

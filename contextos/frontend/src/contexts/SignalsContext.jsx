@@ -4,6 +4,7 @@
  * provides getSignal(id) to any component without re-fetching.
  */
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { coralApiUrl } from "../lib/coralApi";
 
 const SignalsContext = createContext({ signals: null, loading: false, getSignal: () => null });
 
@@ -15,7 +16,7 @@ export function SignalsProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch("/api/signals")
+    fetch(coralApiUrl("/api/signals"))
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;

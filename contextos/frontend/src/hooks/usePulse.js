@@ -1,5 +1,6 @@
 /** usePulse.js — manages pulse data: 90s polling + elaborate call */
 import { useState, useEffect, useCallback, useRef } from "react";
+import { coralApiUrl } from "../lib/coralApi";
 
 export function usePulse() {
   const [sentence,    setSentence]    = useState("");
@@ -12,7 +13,7 @@ export function usePulse() {
 
   const fetchCurrent = useCallback(async () => {
     try {
-      const res  = await fetch("/api/pulse/current");
+      const res  = await fetch(coralApiUrl("/api/pulse/current"));
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setSentence(json.sentence || "");
@@ -35,7 +36,7 @@ export function usePulse() {
     setElaborating(true);
     setElaboration(null);
     try {
-      const res  = await fetch("/api/pulse/elaborate", {
+      const res  = await fetch(coralApiUrl("/api/pulse/elaborate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sentence, data: lastData }),

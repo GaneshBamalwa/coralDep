@@ -173,68 +173,58 @@ export default function QueryConsole() {
   };
 
   return (
-    <div className="p-6 space-y-5 fade-in h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-[16px] font-semibold text-text-primary flex items-center gap-2">
-            <Terminal size={16} className="text-text-primary" />
-            Query Console
-          </h2>
-          <p className="text-[12px] text-text-secondary mt-0.5">
-            Run raw SQL against any Coral source ·{" "}
-            <kbd className="font-mono text-[10px] bg-[#1e1e32] px-1.5 py-0.5 rounded">
-              Ctrl+Enter
-            </kbd>{" "}
-            to execute
+    <div className="query-console-shell fade-in">
+      <div className="query-console-hero">
+        <div className="max-w-2xl">
+          <div className="query-console-title">
+            <Terminal size={18} className="text-accent" />
+            <span>Query Console</span>
+          </div>
+          <p className="query-console-subtitle">
+            Run raw SQL against Coral and inspect the results in a quieter, lighter workspace.
+          </p>
+          <p className="mt-2 inline-flex items-center rounded-full border border-[rgba(11,95,83,0.12)] bg-[rgba(11,95,83,0.04)] px-3 py-1 font-mono text-[11px] text-[#35544d]">
+            Due to limited deployment resources, sources do not all run at the same time. Try patiently.
           </p>
         </div>
 
-        {/* Browse Schema button */}
         <button
           id="browse-schema-btn"
           onClick={toggleSchema}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-[12px] font-medium border transition-all ${
-            showSchema
-                ? "bg-[#00d4ff15] border-[#00d4ff44] text-accent"
-                : "bg-[#0f0f1a] border-[#1e1e32] text-text-secondary hover:text-accent hover:border-accent/20"
-          }`}
+          className={`chip-minimal ${showSchema ? "border-[#0b5f5326] bg-[rgba(11,95,83,0.05)] text-accent" : ""}`}
         >
           <Database size={13} />
-          {showSchema ? "Hide Schema" : "Browse Schema"}
+          {showSchema ? "Hide schema" : "Browse schema"}
         </button>
       </div>
 
       <div className="flex gap-5 flex-1 min-h-0">
         {/* Schema panel */}
         {showSchema && (
-              <div className="w-56 shrink-0 card p-3 flex flex-col gap-2 overflow-hidden">
+          <div className="query-sidebar surface-soft p-3 flex flex-col gap-3 overflow-hidden">
             <div className="relative">
-              <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#475569]" />
+              <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" />
               <input
                 id="schema-search-input"
                 value={schemaFilter}
                 onChange={(e) => setSchemaFilter(e.target.value)}
                 placeholder="Filter tables…"
-                className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-[#0a0a14] border border-[#1e1e32] text-[11px] font-mono text-text-primary outline-none focus:border-accent placeholder-text-secondary"
+                className="w-full pl-8 pr-3 py-2 rounded-full bg-white/80 border border-black/5 text-[11px] font-mono text-text-primary outline-none focus:border-[rgba(11,95,83,0.22)] placeholder-text-secondary"
               />
               {schemaFilter && (
                 <button
                   onClick={() => setSchemaFilter("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#e2e8f0]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-text-primary"
                 >
                   <X size={10} />
                 </button>
               )}
             </div>
-            <div className="flex-1 overflow-y-auto min-h-0 mt-2 space-y-2">
-              {schemaLoading && (
-                <div className="space-y-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="skeleton h-5 w-full rounded" />
-                  ))}
-                </div>
-              )}
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-2">
+              {schemaLoading &&
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="skeleton h-5 w-full rounded" />
+                ))}
               {schemaError && (
                 <p className="text-[11px] text-[#ef4444] font-mono">{schemaError}</p>
               )}
@@ -258,7 +248,7 @@ export default function QueryConsole() {
                 key={q.label}
                 id={`query-chip-${q.label.replace(/\s+/g, "-").toLowerCase()}`}
                 onClick={() => setSql(q.sql)}
-                className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-lg bg-[#0f0f1a] border border-[#1e1e32] text-[#475569] hover:text-[#00d4ff] hover:border-[#00d4ff33] transition-all"
+                className="chip-minimal py-2 px-3 text-[11px] text-[#475569] hover:text-text-primary"
               >
                 <ChevronRight size={10} />
                 {q.label}
@@ -267,7 +257,7 @@ export default function QueryConsole() {
           </div>
 
           {/* SQL editor */}
-          <div className="relative">
+          <div className="relative surface-soft query-console-surface">
             <textarea
               id="sql-editor"
               value={sql}
@@ -275,25 +265,24 @@ export default function QueryConsole() {
               onKeyDown={handleKeyDown}
               rows={7}
               spellCheck={false}
-              className="w-full rounded-lg bg-[#0a0a14] border border-[#1e1e32] focus:border-[#00d4ff44] text-[#e2e8f0] font-mono text-[13px] p-4 resize-y outline-none transition-colors placeholder-[#475569] leading-relaxed"
+              className="query-editor"
               placeholder="SELECT * FROM google_calendar.events LIMIT 10"
-              style={{ fontFamily: '"JetBrains Mono", monospace' }}
             />
-            <span className="absolute bottom-3 right-3 font-mono text-[10px] text-[#475569]">
+            <span className="absolute bottom-3 right-3 font-mono text-[10px] text-[#6b7280]">
               {sql.split("\n").length} lines
             </span>
           </div>
 
           {/* Run button + row count */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <button
               id="run-query-btn"
               onClick={handleRun}
               disabled={loading || !sql.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-[13px] font-semibold transition-all disabled:opacity-40"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-[13px] font-semibold transition-all disabled:opacity-40"
               style={{
-                background: loading ? "#00d4ff22" : "#00d4ff",
-                color: loading ? "#00d4ff" : "#0a0a0f",
+                background: loading ? "rgba(11,95,83,0.08)" : "#0b5f53",
+                color: loading ? "#0b5f53" : "#fff",
               }}
             >
               <Play size={13} className={loading ? "animate-pulse" : ""} />
@@ -301,7 +290,7 @@ export default function QueryConsole() {
             </button>
 
             {data && (
-              <span className="font-mono text-[11px] text-[#10b981]">
+              <span className="font-mono text-[11px] text-[#0b5f53]">
                 {data.rows?.length ?? 0} row{data.rows?.length !== 1 ? "s" : ""} returned
               </span>
             )}
@@ -309,7 +298,7 @@ export default function QueryConsole() {
 
           {/* Error */}
           {error && (
-            <div className="p-3 rounded-lg bg-[#ef444412] border border-[#ef444433] flex items-start gap-2 text-[12px] text-[#ef4444] font-mono">
+            <div className="p-3 rounded-xl bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.16)] flex items-start gap-2 text-[12px] text-[#b91c1c] font-mono">
               <AlertTriangle size={13} className="shrink-0 mt-0.5" />
               <pre className="whitespace-pre-wrap break-words">{error}</pre>
             </div>
@@ -317,7 +306,7 @@ export default function QueryConsole() {
 
           {/* Results */}
           {data && !error && (
-            <div className="fade-in">
+            <div className="fade-in query-results">
               <ResultsTable columns={data.columns} rows={data.rows} isMock={data.mock} />
             </div>
           )}

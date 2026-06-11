@@ -372,27 +372,32 @@ export default function MorningBriefing() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <Coffee size={14} className="text-[#00d4ff]" />
-            <span className="text-[11px] font-mono text-[#475569] uppercase tracking-widest">
-              {greeting}
-            </span>
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between rounded-lg border border-[rgba(11,95,83,0.12)] bg-[linear-gradient(135deg,rgba(11,95,83,0.08),rgba(255,255,255,0.76)_48%,rgba(15,122,100,0.08))] px-3 py-3 shadow-[0_14px_34px_rgba(15,23,32,0.06)]">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[rgba(11,95,83,0.1)] text-accent ring-1 ring-[rgba(11,95,83,0.16)]">
+                <Coffee size={14} />
+              </span>
+              <span className="text-[11px] font-bold text-accent uppercase tracking-[0.18em]">
+                {greeting}
+              </span>
+            </div>
+            <div className="mt-1 text-[34px] md:text-[38px] font-black text-text-primary leading-none">
+              {timeStr}
+            </div>
+            <div className="mt-1 h-1 w-16 rounded-full bg-[linear-gradient(90deg,#0b5f53,#0f7a64)]" />
           </div>
-          <div className="font-mono text-[22px] font-semibold text-slate-900 leading-tight mt-0.5">
-            {timeStr}
-          </div>
+          <button
+            id="briefing-refresh-btn"
+            onClick={() => { setChatOpen(false); setActiveSignal(null); refetch(); }}
+            disabled={loading}
+            className="ml-3 shrink-0 p-2.5 rounded-lg bg-[#0b5f53] text-white shadow-[0_10px_24px_rgba(11,95,83,0.18)] hover:bg-[#0f7a64] transition-all disabled:opacity-40"
+            title="Refresh briefing"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          </button>
         </div>
-        <button
-          id="briefing-refresh-btn"
-          onClick={() => { setChatOpen(false); setActiveSignal(null); refetch(); }}
-          disabled={loading}
-          className="p-2 rounded-lg bg-white border border-gray-200 text-slate-500 hover:text-blue-500 hover:border-blue-200 transition-all disabled:opacity-40 shadow-sm"
-          title="Refresh briefing"
-        >
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-        </button>
       </div>
 
       <div className="h-px bg-gray-200 mx-4 my-1" />

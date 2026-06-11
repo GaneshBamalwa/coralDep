@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import css from "./TodayTab.module.css";
+import { coralApiUrl } from "../../lib/coralApi";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtTime(iso) {
@@ -24,8 +25,8 @@ function useFetch(url, opts = {}) {
     let cancelled = false;
     setLoading(true);
     const fetchFn = opts.method === "POST"
-      ? fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts.body) })
-      : fetch(url);
+      ? fetch(coralApiUrl(url), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts.body) })
+      : fetch(coralApiUrl(url));
 
     fetchFn
       .then(r => r.json())
@@ -255,7 +256,7 @@ function EveningLayout({ timeCtx, briefing, pressure }) {
 
   useEffect(() => {
     setLoadingPlan(true);
-    fetch("/api/lens/query", {
+    fetch(coralApiUrl("/api/lens/query"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -272,7 +273,7 @@ function EveningLayout({ timeCtx, briefing, pressure }) {
   const handleExport = async () => {
     const content = tomorrowPlan?.content || "";
     try {
-      const res  = await fetch("/api/export", {
+      const res  = await fetch(coralApiUrl("/api/export"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "notion", payload: { content } }),

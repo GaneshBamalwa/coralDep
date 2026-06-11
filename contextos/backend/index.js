@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { exec, execSync } from "child_process";
+import { exec } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import { parseCoralOutput } from "./coralParser.js";
@@ -48,6 +48,7 @@ async function getGroqClient() {
 
 const PORT = process.env.PORT || 3001;
 const MOCK_MODE = process.env.MOCK_MODE === "true";
+const EFFECTIVE_MOCK_MODE = MOCK_MODE || !coralAvailable;
 const GITHUB_ENABLED = process.env.GITHUB_ENABLED === "true";
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
@@ -107,19 +108,8 @@ async function refreshGoogleToken() {
 setInterval(refreshGoogleToken, 45 * 60 * 1000);
 
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
-  const request = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: `${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`,
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      responseMimeType: "application/json",
+  try {
+    return await callCoreAgentJSON(`${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`, {
       temperature: 0.4,
       maxOutputTokens: 2048,
     },
@@ -131,28 +121,13 @@ async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
   const text = response.candidates[0].content.parts[0].text;
 
   try {
-    let cleanText = text.trim();
-    if (cleanText.startsWith("```json")) {
-      cleanText = cleanText.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
-    } else if (cleanText.startsWith("```")) {
-      cleanText = cleanText.replace(/^```\s*/, "").replace(/\s*```$/, "");
-    }
-    
-    try {
-      return JSON.parse(cleanText);
-    } catch (err) {
-      const match = cleanText.match(/\{[\s\S]*\}/);
-      if (match) {
-        return JSON.parse(match[0]);
-      }
-      throw err;
-    }
+    return JSON.parse(text);
   } catch (e) {
     if (retriesLeft > 0) {
       console.warn("[vertex] JSON parsing failed. Retrying once... Raw text was:", text);
       return generateBriefing(systemPrompt, userContext, retriesLeft - 1);
     }
-    console.error("[gemini] Failed to parse JSON response:", text);
+    console.error("[vertex] Failed to parse JSON response:", text);
     return {
       situation: "Briefing generation failed - model returned malformed response.",
       beforeYouStart: [],
@@ -207,23 +182,18 @@ initCoralSources();
 function runCoralQuery(sql, timeoutMs = 30_000) {
   return coralQueue.add(() => new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
+    if (!coralAvailable) {
+      return reject(new Error("Coral CLI not available. Set CORAL_PATH or enable MOCK_MODE=true."));
+    }
+
     const env = buildCoralEnv();
-    // Allow overriding coral command via env var if PATH isn't updated in the running process.
-    const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
-    const cmd = `${coralCmd} sql "${normalized}"`;
-    // Use shell=true on Windows so PATH updates from the environment are honored.
-    exec(
-      cmd,
-      { timeout: timeoutMs, env, shell: true },
+    execFile(
+      coralCommand,
+      ["sql", normalized],
+      { timeout: timeoutMs, env },
       (err, stdout, stderr) => {
         if (err) {
           if (err.killed || err.signal === "SIGTERM") return reject(new Error("timeout"));
-          // Helpful ENOENT handling when the coral binary is not available
-          if (err.code === 'ENOENT' || /not recognized as an internal or external command/.test(stderr || '')) {
-            const msg = `coral command not found. Set CORAL_PATH to the full path to coral.exe or ensure coral is on PATH.`;
-            console.warn('[coral] ENOENT:', msg);
-            return reject(new Error(msg));
-          }
           return reject(new Error(stderr?.trim() || err.message));
         }
         resolve(stdout);
@@ -259,10 +229,10 @@ app.post("/api/query", async (req, res) => {
   if (!sql || typeof sql !== "string") {
     return res.status(400).json({ error: "sql field is required" });
   }
-  if (MOCK_MODE) {
+  if (EFFECTIVE_MOCK_MODE) {
     return res.json({
       columns: ["result"],
-      rows: [{ result: "MOCK_MODE=true -- set MOCK_MODE=false and restart to run real queries" }],
+      rows: [{ result: coralAvailable ? "MOCK_MODE=true -- set MOCK_MODE=false and restart to run real queries" : "Coral CLI is unavailable; backend is running in fallback mode." }],
       mock: true,
     });
   }
@@ -277,7 +247,7 @@ app.post("/api/query", async (req, res) => {
 
 // ── GET /api/schema ───────────────────────────────────────────────────────────
 app.get("/api/schema", async (req, res) => {
-  if (MOCK_MODE) {
+  if (EFFECTIVE_MOCK_MODE) {
     return res.json({
       columns: ["schema_name", "table_name"],
       rows: [
@@ -317,7 +287,7 @@ let briefingInFlight = null;
 async function fetchAndGenerateBriefing() {
   let sources;
 
-  if (MOCK_MODE) {
+  if (EFFECTIVE_MOCK_MODE) {
     sources = {
       calendar:       { rows: mockCalendarEvents,  source_error: null },
       github_issues:  { rows: mockGithubPRs,       source_error: null },
@@ -385,9 +355,9 @@ async function fetchAndGenerateBriefing() {
     .map(([k]) => k);
 
   // ── Synthesis ──────────────────────────────────────────────────────────────
-  let briefing = MOCK_MODE ? mockBriefing : null;
+  let briefing = EFFECTIVE_MOCK_MODE ? mockBriefing : null;
 
-  if (!MOCK_MODE) {
+  if (!EFFECTIVE_MOCK_MODE) {
     const now      = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
@@ -562,7 +532,7 @@ app.post("/api/briefing/refresh", async (req, res) => {
 
 // ── GET /api/focus-debt ───────────────────────────────────────────────────────
 app.get("/api/focus-debt", async (req, res) => {
-  if (MOCK_MODE) return res.json(mockFocusDebt);
+  if (EFFECTIVE_MOCK_MODE) return res.json(mockFocusDebt);
 
   const [notionResult, githubResult] = await Promise.all([
     safeQuery("SELECT * FROM notion.search LIMIT 50", "notion"),
@@ -602,7 +572,7 @@ app.get("/api/focus-debt", async (req, res) => {
 
 // ── GET /api/unfinished-loops ─────────────────────────────────────────────────
 app.get("/api/unfinished-loops", async (req, res) => {
-  if (MOCK_MODE) return res.json(mockUnfinishedLoops);
+  if (EFFECTIVE_MOCK_MODE) return res.json(mockUnfinishedLoops);
 
   const [githubResult, notionResult] = await Promise.all([
     GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
@@ -644,7 +614,7 @@ app.get("/api/unfinished-loops", async (req, res) => {
 
 // ── GET /api/sources ──────────────────────────────────────────────────────────
 app.get("/api/sources", async (req, res) => {
-  if (MOCK_MODE) return res.json(mockSources);
+  if (EFFECTIVE_MOCK_MODE) return res.json(mockSources);
 
   const KNOWN = ["google_calendar", "github", "gmail", "slack", "notion", "discord"];
   try {
@@ -682,7 +652,8 @@ app.get("/api/health", (req, res) => {
     mock_mode:      MOCK_MODE,
     github_owner:   GITHUB_OWNER || null,
     github_repo:    GITHUB_REPO  || null,
-    gcloud_project: process.env.GCLOUD_PROJECT || null,
+    gcloud_project: vertex.project,
+    vertex,
     timestamp:      new Date().toISOString(),
   });
 });
@@ -709,8 +680,8 @@ Keep replies under 150 words unless the user explicitly asks for something longe
   ];
 
   try {
-    const request = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
+    const reply = await callCoreAgent(null, {
+      systemInstruction: systemPrompt,
       contents,
       generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
     };
@@ -1081,6 +1052,7 @@ function buildFallbackBriefing(sources) {
 
 // ── Startup validation ─────────────────────────────────────────────────────
 function validateEnv() {
+  const vertex = getVertexStatus();
   const tokens = {
     GMAIL_ACCESS_TOKEN:           process.env.GMAIL_ACCESS_TOKEN,
     GOOGLE_CALENDAR_ACCESS_TOKEN: process.env.GOOGLE_CALENDAR_ACCESS_TOKEN,
@@ -1091,13 +1063,12 @@ function validateEnv() {
   for (const [key, val] of Object.entries(tokens)) {
     console.log(`   [${val ? "✓" : "!"}] ${key} is ${val ? "present" : "missing"}`);
   }
-  if (!process.env.GCLOUD_PROJECT) {
+  if (!vertex.project) {
     console.warn("[env] WARNING: GCLOUD_PROJECT not set - Vertex AI calls will fail");
   }
-  if (!process.env.GCLOUD_LOCATION) {
-    console.warn("[env] WARNING: GCLOUD_LOCATION not set - defaulting to us-central1");
-    process.env.GCLOUD_LOCATION = "us-central1";
-  }
+  console.log(`   [${vertex.project ? "✓" : "!"}] VERTEX_PROJECT is ${vertex.project || "missing"}`);
+  console.log(`   [✓] VERTEX_LOCATION is ${vertex.location}`);
+  console.log(`   [✓] VERTEX_MODEL is ${vertex.model}`);
 }
 
 async function checkADC() {
@@ -1125,7 +1096,7 @@ app.use("/api/timecontext", timeRouter);
 app.use("/api/export",      exportRouter);
 
 // ── Server ────────────────────────────────────────────────────────────────────
-const server = app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🟢 ContextOS backend running on http://localhost:${PORT}`);
   console.log(`   MOCK_MODE:     ${MOCK_MODE}`);
   console.log(`   GCLOUD_PROJECT: ${process.env.GCLOUD_PROJECT || "(not set)"}`);

@@ -5,168 +5,226 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20-43853D.svg?style=for-the-badge&logo=node.js)](#)
 [![Express](https://img.shields.io/badge/Express-4.x-000000.svg?style=for-the-badge&logo=express)](#)
 [![Coral](https://img.shields.io/badge/Coral-SQL_Runtime-FF4F00.svg?style=for-the-badge)](#)
-[![Vertex AI](https://img.shields.io/badge/Vertex_AI-Gemini_2.5-4285F4.svg?style=for-the-badge&logo=googlecloud)](#)
-[![Groq](https://img.shields.io/badge/Groq-Llama_3-f55036.svg?style=for-the-badge)](#)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-Llama_3.3_70B-8A2BE2.svg?style=for-the-badge)](#)
 
-Meridian (formerly ContextOS) is a retrieval-first personal intelligence dashboard. It unifies fragmented workflow data across platforms like Calendar, GitHub, Slack, Notion, and Discord into a single, beautifully designed operational command center. It leverages advanced LLM synthesis to provide actionable morning briefings, focus debt analysis, and a unified context timeline.
+Meridian is a premium, real-time workflow intelligence tool built during the **Coral Hackathon**. It unifies fragmented workflow data across platforms like Google Calendar, Gmail, GitHub, Slack, Notion, and Discord into a single, beautifully designed operational command center. It leverages an advanced **LLM Orchestration Layer** (OpenRouter / Llama 3.3 70B) to synthesize highly personalized, actionable morning briefings, focus debt analysis, and a unified context timeline.
 
 ---
 
-## Architecture Overview
+## 🧰 Tools Built During the Hackathon
 
-Meridian consists of a React frontend and a Node.js/Express backend that securely interfaces with local and remote services. The frontend provides a rich, responsive interface with specialized panels for timelines, queries, and briefings. The backend orchestrates data retrieval, LLM synthesis, and prompt generation.
+- **Meridian Dashboard** — Core multi-source workflow intelligence app (briefing, timeline, focus debt, loops, SQL console).  
+  [`/contextos`](./contextos)
+- **Meridian Lens** — Command-palette style assistant (Ctrl/Cmd + K) for suggested actions and natural-language queries.  
+  [`frontend Meridian Lens`](./contextos/frontend/src/components/MeridianLens/MeridianLens.jsx) · [`backend Lens API`](./contextos/backend/lens.js)
+- **Meridian Sidebar (Browser Extension)** — Quick-access browser extension that opens specific Meridian panels directly from Chrome/Edge.  
+  [`extension folder`](./contextos/frontend/extension) · [`setup guide`](./contextos/frontend/extension/README.md)
+- **Chromium Browser Data Source Bridge** — Local browser data server + Coral manifest to query bookmarks, history, downloads, tabs, top sites, and extensions for Chrome/Edge/Brave.  
+  [`browser_server.py`](./contextos/browser_server.py) · [`manifest`](./contextos/manifest.yaml)
+- **Discord Coral Source** — Custom Coral source exposing Discord guilds, channels, messages, and members as SQL tables.  
+  [`source docs`](./contextos/sources/discord/README.md) · [`manifest`](./contextos/sources/discord/manifest.yaml)
+- **Slack Messages Coral Source** — Custom Coral source for Slack channels, messages, and unread-channel intelligence via SQL.  
+  [`manifest`](./contextos/sources/slack_messages/manifest.yaml)
 
-```mermaid
-graph TD
-    subgraph Frontend
-        UI[User Interface Dashboard]
-        Hooks[Custom API Hooks]
-        UI --> Hooks
-    end
+---
 
-    subgraph Backend
-        API[API Endpoints]
-        Logic[Meridian Data & AI Logic]
-        
-        API --> Logic
-    end
+## 🚀 Features
 
-    subgraph Coral_Data_Layer
-        CoralSQL[Coral SQL Engine]
-    end
+- **Morning Briefing** : AI-powered synthesis of your most urgent tasks, stale loops, and optimal focus blocks, drawn from live data across Calendar, Gmail, Slack, and Notion.
+- **Focus Debt Analyzer** : A rolling 7-day visualization (Recharts) of planned vs. completed work extracted from your project management tools.
+- **Unfinished Loops** : Identifies attention sinkholes: open issues with heavy comment activity or Notion cards stuck "In Progress" for days.
+- **Unified Timeline** : Streams chronological activity across all registered source platforms into one filtered feed.
+- **Coral SQL Console** : Directly query your connected SaaS platforms using standard SQL grammar through the integrated Coral engine.
 
-    subgraph External_Sources
-        Discord[Discord]
-        GitHub[GitHub]
-        Slack[Slack]
-        GCal[Google Calendar]
-        Notion[Notion]
-        Gmail[Gmail]
-    end
+---
 
-    subgraph LLMs
-        Vertex[Google Vertex AI Gemini]
-        Groq[Groq Llama-3]
-    end
+## 🛠 Tech Stack
 
-    Hooks <-->|REST| API
-    Logic <-->|CLI Exec| CoralSQL
-    Logic <-->|Synthesis & Parsing| LLMs
-    CoralSQL <-->|Live API Queries| External_Sources
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + Vite + Tailwind CSS + Lucide Icons + Recharts |
+| Backend | Node.js + Express (Coral proxy) |
+| Data layer | [Coral CLI](https://coral.so/docs) : SQL over live APIs |
+| LLM synthesis | OpenRouter API (`meta-llama/llama-3.3-70b-instruct`) |
+| Discord source | Custom Coral HTTP source spec |
+
+---
+
+## 🗂 Project Structure
+
+```
+meridian/
+├── sources/
+│   └── discord/
+│       ├── manifest.yaml     # Coral custom source spec
+│       └── README.md         # Discord setup guide
+├── backend/
+│   ├── index.js              # Express API server (port 3001)
+│   ├── mockData.js           # Realistic mock data for MOCK_MODE
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx           # Three-panel layout
+│   │   ├── components/
+│   │   │   ├── MorningBriefing.jsx
+│   │   │   ├── FocusDebt.jsx
+│   │   │   ├── UnfinishedLoops.jsx
+│   │   │   ├── ContextTimeline.jsx
+│   │   │   ├── SourceStatus.jsx
+│   │   │   └── QueryConsole.jsx
+│   │   ├── hooks/
+│   │   │   └── useCoral.js
+│   │   └── styles/
+│   │       └── globals.css
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── package.json
+├── .env.example
+└── package.json              # Root workspace
 ```
 
-## How Coral Powers Meridian
+---
 
-Meridian utilizes the **Coral SQL Engine** as its foundational data layer. Instead of building complex REST or GraphQL integrations for every service and storing them in an intermediate database, Coral allows Meridian to query live APIs directly using standard SQL. By executing raw SQL against virtual schemas representing Google Calendar, GitHub, Slack, Discord, and Notion, Meridian instantly retrieves fresh, normalized data. The backend proxy formats these SQL commands dynamically, passing them to the Coral CLI environment. This seamless abstraction dramatically reduces the latency and complexity of aggregating personal intelligence data from heavily siloed platforms.
+## ⚙️ Prerequisites
 
-## Key Features
+1. **Node.js** ≥ 18
+2. **npm** ≥ 9 (workspaces support)
+3. **Coral CLI** installed and on your PATH — [Installation guide](https://coral.so/docs/install)
+4. **OpenRouter API key** — [openrouter.ai](https://openrouter.ai)
+5. Coral sources added (see below)
 
-*   **Morning Briefing:** A summarized daily report generated by Vertex AI (Gemini 2.5 Pro) based on calendar events, unread emails, and pending tasks.
-*   **Focus Debt Tracking:** Visualizes planned versus completed tasks to prevent attention sinkholes.
-*   **Context Timeline:** A chronological activity stream aggregating all external data sources.
-*   **Meridian Lens:** An interactive chat interface backed by Groq (Llama 3) that translates natural language questions into executable Coral SQL queries.
-*   **Custom Discord Integration:** Employs a custom HTTP source specification to seamlessly integrate Discord messages, guilds, and member counts.
+> **No Coral? No problem.** Set `MOCK_MODE=true` in your `.env` to run the full dashboard with realistic fake data — no integrations required.
 
 ---
 
-## Setup and Installation
+## 🚀 Quick Start
 
-### Prerequisites
+### 1. Clone & Install
 
-1.  **Node.js** (v18 or higher)
-2.  **npm** (v9 or higher for workspaces support)
-3.  **Coral CLI** installed and added to PATH. [Installation Guide](https://coral.so/docs/install)
-4.  **Google Cloud Platform Account** with Vertex AI enabled and Application Default Credentials (ADC) configured.
+```bash
+git clone https://github.com/your-org/meridian.git
+cd meridian
+npm run install:all
+```
 
-### Local Development
+### 2. Configure Environment
 
-1.  **Clone the Repository**
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
 
-    ```bash
-    git clone https://github.com/GaneshBamalwa/coralHackathon.git
-    cd coralHackathon/contextos
-    npm install
-    ```
+Key variables:
 
-2.  **Configure Environment Variables**
-    
-    Create a `.env` file in the root directory based on `.env.example`.
+```env
+PORT=3001
+MOCK_MODE=false                        # Set to true to skip Coral setup
 
-    ```env
-    MOCK_MODE=false
-    PORT=3001
-    
-    # LLM API Keys
-    GROQ_API_KEY=your_groq_key
-    GCLOUD_PROJECT=your_gcp_project_id
-    GCLOUD_LOCATION=us-central1
-    
-    # Optional Source Identifiers
-    GITHUB_OWNER=your_github_username
-    GITHUB_REPO=your_repository_name
-    ```
+# OpenRouter
+OPENROUTER_API_KEY=your_key_here
 
-    Note: If Coral is unavailable, you can set `MOCK_MODE=true` to preview the application with realistic dummy data.
+# Source Integration Tokens (used by Coral directly)
+GITHUB_ENABLED=false
+GITHUB_OWNER=your_github_owner
+GITHUB_REPO=your_github_repo
+GMAIL_ACCESS_TOKEN=your_token
+GOOGLE_CALENDAR_ACCESS_TOKEN=your_token
+SLACK_TOKEN=your_token
+NOTION_TOKEN=your_token
+```
 
-3.  **Configure Coral Sources**
+### 3. Add Coral Sources
 
-    Standard sources can be added directly via the CLI:
-    ```bash
-    coral source add github
-    coral source add slack
-    coral source add google_calendar
-    coral source add notion
-    ```
+```bash
+coral source add github
+coral source add slack
+coral source add google_calendar
+coral source add notion
+```
 
-    For the custom Discord integration:
-    ```bash
-    # Linux/macOS
-    cp -r sources/discord/ ~/.coral/workspaces/default/sources/discord/
-    
-    # Windows (PowerShell)
-    Copy-Item -Recurse sources\discord\ "$env:USERPROFILE\.coral\workspaces\default\sources\discord\"
-    
-    coral source add --file sources/discord/manifest.yaml
-    ```
-    Ensure you export `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` in your environment. Detailed instructions are available in `sources/discord/README.md`.
+For the custom Discord integration:
 
-4.  **Start the Application**
+```bash
+# Linux/macOS
+cp -r sources/discord/ ~/.coral/workspaces/default/sources/discord/
 
-    From the root `contextos` directory:
-    ```bash
-    # Start both backend and frontend concurrently
-    npm run dev
-    ```
-    
-    *   **Frontend:** http://localhost:5173
-    *   **Backend:** http://localhost:3001
+# Windows (PowerShell)
+Copy-Item -Recurse sources\discord\ "$env:USERPROFILE\.coral\workspaces\default\sources\discord\"
+
+coral source add --file sources/discord/manifest.yaml
+```
+
+Ensure `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` are exported in your environment. See `sources/discord/README.md` for details.
+
+### 4. Run
+
+You need two terminal windows to run the frontend and backend simultaneously.
+
+**Terminal 1 — Backend:**
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+**Terminal 2 — Frontend:**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001
+
+> **Note on Windows Security**: The backend injects OAuth/API tokens directly into process memory (`shell: false`) to safely bypass Windows Credential Manager/Keychain lockouts when interacting with the Coral CLI.
 
 ---
 
-## API Reference
+## 📡 API Reference
 
-| Endpoint | Method | Description |
+| Method | Endpoint | Description |
 |---|---|---|
-| `/api/query` | `POST` | Executes raw Coral SQL queries. |
-| `/api/briefing` | `GET` | Returns synthesized daily briefing via Vertex AI. |
-| `/api/focus-debt` | `GET` | Returns analytics on planned vs completed tasks over 7 days. |
-| `/api/unfinished-loops` | `GET` | Surfaces high-touch, unresolved items across sources. |
-| `/api/sources` | `GET` | Returns connectivity status for all configured Coral sources. |
-| `/api/meridian` | `POST` | Translates natural language to SQL and returns formatted LLM answers. |
-| `/api/health` | `GET` | Health check endpoint for system readiness. |
+| `POST` | `/api/query` | Run raw Coral SQL |
+| `GET` | `/api/briefing` | Morning briefing via LLM + all sources |
+| `GET` | `/api/focus-debt` | Planned vs. completed tasks (7 days) |
+| `GET` | `/api/unfinished-loops` | Work touched but never closed |
+| `GET` | `/api/sources` | Connected source status |
+| `GET` | `/api/health` | Health check |
 
 ---
 
-## Design System
+## 🖥 Dashboard Panels
 
-The application utilizes a professional, clean interface optimized for data density and quick scanning. 
+| Panel | Description |
+|---|---|
+| **Today** (Focus Debt) | Bar chart of planned vs. completed work with a Focus Debt Score. |
+| **Attention** (Unfinished Loops) | Items touched repeatedly but never closed — your attention sinkholes. |
+| **Timeline** | Unified chronological activity stream across all sources, with per-source filters. |
+| **Console** | Power-user raw SQL console with example query chips. |
+| **Morning Briefing** *(always-visible right panel)* | Urgent items, waiting-on-you queue, best focus window, and today's calendar. |
+
+---
+
+## 🛡 Graceful Degradation
+
+Meridian features robust error boundaries and state management. If an integration (like GitHub) is disabled or encounters a rate limit, the API dynamically handles timeouts (15s limit) and the frontend gracefully falls back to a warning state — without breaking the application layout.
+
+---
+
+## 🎨 Design System
 
 | Element | Description |
 |---|---|
-| **Typography** | Inter (UI components), JetBrains Mono (Data tables, Code blocks) |
-| **Color Palette** | Slate/White base, Accent Blue for primary actions, Amber for warnings, Emerald for success states. |
-| **Components** | Tailwind CSS custom utility classes, Glassmorphism panels, Micro-animations (glow, pulse, fade-in). |
+| **Typography** | Inter (UI components), JetBrains Mono (data tables, code blocks) |
+| **Color Palette** | Slate/White base · Accent Blue for primary actions · Amber for warnings · Emerald for success |
+| **Components** | Tailwind CSS utility classes · Glassmorphism panels · Micro-animations (glow, pulse, fade-in) |
 
-## License
+---
 
-This project is licensed under the MIT License.
+## 📄 License
+
+This project is licensed under the [MIT License](./LICENSE).

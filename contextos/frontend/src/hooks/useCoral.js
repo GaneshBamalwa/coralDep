@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { coralApiUrl } from "../lib/coralApi";
 
 /**
  * useCoral — generic fetch hook for /api/* endpoints.
@@ -28,7 +29,7 @@ export function useCoral(endpoint, options = {}) {
 
       try {
         const isPost = options.method === "POST";
-        const res = await fetch(endpoint, {
+        const res = await fetch(coralApiUrl(endpoint), {
           method: isPost ? "POST" : "GET",
           headers: isPost ? { "Content-Type": "application/json" } : undefined,
           body: isPost ? JSON.stringify(bodyOrParams) : undefined,
@@ -90,7 +91,7 @@ export function useCoralQuery() {
     setData(null);
 
     try {
-      const res = await fetch("/api/query", {
+      const res = await fetch(coralApiUrl("/api/query"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sql }),
@@ -122,7 +123,7 @@ export function useCoralSchema() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/schema");
+      const res = await fetch(coralApiUrl("/api/schema"));
       const json = await res.json();
       if (json.error) throw new Error(json.error);
 
@@ -162,7 +163,7 @@ export function useChat() {
     setHistory(nextHistory);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(coralApiUrl("/api/chat"), {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ message, context, history }),

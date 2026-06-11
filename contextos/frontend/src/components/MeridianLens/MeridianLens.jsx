@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Command } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import css from "./MeridianLens.module.css";
+import { coralApiUrl } from "../../lib/coralApi";
 
 const ICON_MAP = {
   pr:       "⬡",
@@ -18,7 +19,7 @@ function SuggestionRow({ s, activeTab }) {
   const handleClick = async () => {
     setBusy(true);
     try {
-      const res  = await fetch("/api/lens/execute", {
+      const res  = await fetch(coralApiUrl("/api/lens/execute"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: s.action, payload: s.payload }),
@@ -93,7 +94,7 @@ export default function MeridianLens({ isOpen, onClose, activeTab }) {
     if (!isOpen) { setQuery(""); setResponse(null); return; }
     inputRef.current?.focus();
     setLoadingSugg(true);
-    fetch("/api/lens/suggestions", {
+    fetch(coralApiUrl("/api/lens/suggestions"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ context: { activeTab, currentTime: new Date().toISOString() } }),
@@ -110,7 +111,7 @@ export default function MeridianLens({ isOpen, onClose, activeTab }) {
     setQuerying(true);
     setResponse(null);
     try {
-      const res  = await fetch("/api/meridian", {
+      const res  = await fetch(coralApiUrl("/api/lens/query"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: query.trim() }),
