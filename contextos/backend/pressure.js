@@ -33,8 +33,8 @@ pressureRouter.get("/", async (req, res) => {
     if (cached) return res.json(cached);
 
     const [prs, gmailRows, slackRows] = await Promise.all([
-      safeQuery("SELECT number, title, state, updated_at, user__login FROM github.pulls WHERE owner = 'GaneshBamalwa' AND repo = 'coralHackathon' LIMIT 50", "github"),
-      safeQuery("SELECT id, snippet, label_ids, internal_date FROM gmail.messages WHERE label_ids = 'INBOX' LIMIT 50", "gmail"),
+      safeQuery("SELECT number, title, state, updated_at, user__login FROM github.pulls WHERE owner = 'GaneshBamalwa' AND repo = 'coralHackathon' LIMIT 30", "github"),
+      safeQuery("SELECT id, snippet, label_ids, internal_date FROM gmail.messages WHERE label_ids = 'INBOX' LIMIT 20", "gmail"),
       safeQuery("SELECT id, name, num_members FROM slack.channels LIMIT 30", "slack"),
     ]);
 

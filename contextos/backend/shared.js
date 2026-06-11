@@ -9,17 +9,25 @@
  *   callGeminiJSON(prompt, opts)  — one-shot LLM call that parses + returns JSON
  */
 
+import PQueue from "p-queue";
 import { exec }         from "child_process";
 import dotenv           from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseCoralOutput } from "./coralParser.js";
 
 dotenv.config({ path: "../.env" });
 
-// ── Gemini setup ─────────────────────────────────────────────────────────────
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
+export const coralQueue = new PQueue({ concurrency: 2 });
 
-export const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+// ── Gemini setup ─────────────────────────────────────────────────────────────
+let _geminiModel = null;
+export async function getGeminiModel() {
+  if (!_geminiModel) {
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
+    _geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  }
+  return _geminiModel;
+}
 
 /**
  * parseGeminiJSON — resilient JSON extractor.
@@ -77,7 +85,8 @@ export function parseGeminiJSON(raw) {
 }
 
 export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 8192 } = {}) {
-  const result = await geminiModel.generateContent({
+  const model = await getGeminiModel();
+  const result = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { temperature, maxOutputTokens },
   });
@@ -85,7 +94,8 @@ export async function callGemini(prompt, { temperature = 0.4, maxOutputTokens = 
 }
 
 export async function callGeminiJSON(prompt, opts = {}) {
-  const result = await geminiModel.generateContent({
+  const model = await getGeminiModel();
+  const result = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: "application/json",
@@ -100,7 +110,7 @@ export async function callGeminiJSON(prompt, opts = {}) {
 
 // ── Coral helpers ────────────────────────────────────────────────────────────
 export function runCoralQuery(sql, timeoutMs = 30_000) {
-  return new Promise((resolve, reject) => {
+  return coralQueue.add(() => new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
     exec(
       `coral sql "${normalized}"`,
@@ -113,12 +123,24 @@ export function runCoralQuery(sql, timeoutMs = 30_000) {
         resolve(stdout);
       }
     );
-  });
+  }));
+}
+
+export function enforceSQLLimit(sql) {
+  const trimmed = sql.trim();
+  if (/\bLIMIT\s+\d+\s*;?$/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.endsWith(";")) {
+    return `${trimmed.slice(0, -1)} LIMIT 100;`;
+  }
+  return `${trimmed} LIMIT 100`;
 }
 
 export async function safeQuery(sql, label = "unknown", timeoutMs = 15_000) {
   try {
-    const stdout = await runCoralQuery(sql, timeoutMs);
+    const limitedSql = enforceSQLLimit(sql);
+    const stdout = await runCoralQuery(limitedSql, timeoutMs);
     const parsed = parseCoralOutput(stdout);
     return { ...parsed, source: label };
   } catch (err) {

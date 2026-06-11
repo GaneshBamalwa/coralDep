@@ -4,10 +4,9 @@ import dotenv from "dotenv";
 import { exec, execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseCoralOutput } from "./coralParser.js";
 import { detectSignals }    from "./signals.js";
-import Groq from 'groq-sdk';
+import { coralQueue, enforceSQLLimit } from "./shared.js";
 
 // ── Meridian module imports ───────────────────────────────────────────────────
 import { pulseRouter,    startPulseJob  } from "./pulse.js";
@@ -38,7 +37,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'missing_key_provided' });
+let _groq = null;
+async function getGroqClient() {
+  if (!_groq) {
+    const { default: Groq } = await import("groq-sdk");
+    _groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'missing_key_provided' });
+  }
+  return _groq;
+}
 
 const PORT = process.env.PORT || 3001;
 const MOCK_MODE = process.env.MOCK_MODE === "true";
@@ -47,11 +53,17 @@ const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
 
 // ── Gemini API setup ─────────────────────────────────────────────────────────
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
-
-const geminiModel = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-});
+let _geminiModel = null;
+async function getGeminiModel() {
+  if (!_geminiModel) {
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing_key");
+    _geminiModel = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
+  }
+  return _geminiModel;
+}
 
 // ── Google OAuth Auto-Refresh ────────────────────────────────────────────────
 let isRefreshing = false;
@@ -113,7 +125,8 @@ async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
     },
   };
 
-  const result = await geminiModel.generateContent(request);
+  const model = await getGeminiModel();
+  const result = await model.generateContent(request);
   const response = result.response;
   const text = response.candidates[0].content.parts[0].text;
 
@@ -192,7 +205,7 @@ async function initCoralSources() {
 initCoralSources();
 
 function runCoralQuery(sql, timeoutMs = 30_000) {
-  return new Promise((resolve, reject) => {
+  return coralQueue.add(() => new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
     const env = buildCoralEnv();
     // Allow overriding coral command via env var if PATH isn't updated in the running process.
@@ -216,12 +229,13 @@ function runCoralQuery(sql, timeoutMs = 30_000) {
         resolve(stdout);
       }
     );
-  });
+  }));
 }
 
 async function safeQuery(sql, label = "unknown", retries = 2) {
   try {
-    const stdout = await runCoralQuery(sql, 15000);
+    const limitedSql = enforceSQLLimit(sql);
+    const stdout = await runCoralQuery(limitedSql, 15000);
     const parsed = parseCoralOutput(stdout);
     return { ...parsed, source: label };
   } catch (err) {
@@ -253,7 +267,8 @@ app.post("/api/query", async (req, res) => {
     });
   }
   try {
-    const stdout = await runCoralQuery(sql, 30_000);
+    const limitedSql = enforceSQLLimit(sql);
+    const stdout = await runCoralQuery(limitedSql, 30_000);
     return res.json(parseCoralOutput(stdout));
   } catch (err) {
     return res.status(500).json({ error: err.message, columns: [], rows: [] });
@@ -294,8 +309,12 @@ app.get("/api/schema", async (req, res) => {
   }
 });
 
-// ── GET /api/briefing ─────────────────────────────────────────────────────────
-app.get("/api/briefing", async (req, res) => {
+// ── Briefing Cache & Generation Logic ─────────────────────────────────────────
+let briefingCache = { data: null, generatedAt: null };
+const BRIEFING_TTL_MS = 60 * 60 * 1000; // 1 hour
+let briefingInFlight = null;
+
+async function fetchAndGenerateBriefing() {
   let sources;
 
   if (MOCK_MODE) {
@@ -311,7 +330,7 @@ app.get("/api/briefing", async (req, res) => {
   } else {
     const today = new Date().toISOString().split('T')[0];
     const queries = {
-      calendar:      `SELECT summary, start_date_time, end_date_time, start_date, end_date, status, location, description, attendees_emails, hangout_link FROM google_calendar.events WHERE start_date >= '${today}' OR start_date_time >= '${today}T00:00:00Z' ORDER BY start_date_time ASC LIMIT 50`,
+      calendar:      `SELECT summary, start_date_time, end_date_time, start_date, end_date, status, location, description, attendees_emails, hangout_link FROM google_calendar.events WHERE start_date >= '${today}' OR start_date_time >= '${today}T00:00:00Z' ORDER BY start_date_time ASC LIMIT 20`,
       github_issues: GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
         ? `SELECT number, title, state, created_at, updated_at, comments FROM github.issues WHERE owner = '${GITHUB_OWNER}' AND repo = '${GITHUB_REPO}' AND state = 'open' ORDER BY updated_at DESC LIMIT 10`
         : null,
@@ -332,7 +351,7 @@ app.get("/api/briefing", async (req, res) => {
         const channelsResult = await safeQuery(`SELECT id, name FROM discord.channels WHERE guild_id = '${firstGuildId}' LIMIT 10`, "discord_channels");
         const firstChannelId = channelsResult.rows?.[0]?.id;
         if (!firstChannelId) return [];
-        const msgsResult = await safeQuery(`SELECT author__username, content, timestamp FROM discord.messages WHERE channel_id = '${firstChannelId}' AND limit = 20`, "discord_messages");
+        const msgsResult = await safeQuery(`SELECT author__username, content, timestamp FROM discord.messages WHERE channel_id = '${firstChannelId}' AND limit = 20 LIMIT 20`, "discord_messages");
         return msgsResult.rows || [];
       } catch (e) {
         throw e;
@@ -497,7 +516,48 @@ Rules:
   // ── Signal detection (runs on already-fetched data, no new Coral queries) ──
   const signals = detectSignals(sources);
 
-  res.json({ briefing, signals, sources, failed_sources });
+  return { briefing, signals, sources, failed_sources };
+}
+
+async function getOrGenerateBriefing() {
+  const now = Date.now();
+  if (briefingCache.data && (now - briefingCache.generatedAt) < BRIEFING_TTL_MS) {
+    return briefingCache.data;
+  }
+  if (!briefingInFlight) {
+    briefingInFlight = fetchAndGenerateBriefing().then(result => {
+      briefingCache = { data: result, generatedAt: Date.now() };
+      briefingInFlight = null;
+      return result;
+    }).catch(err => {
+      briefingInFlight = null;
+      throw err;
+    });
+  }
+  return briefingInFlight;
+}
+
+// ── GET /api/briefing ─────────────────────────────────────────────────────────
+app.get("/api/briefing", async (req, res) => {
+  try {
+    const now = Date.now();
+    const isCached = !!(briefingCache.data && (now - briefingCache.generatedAt) < BRIEFING_TTL_MS);
+    const result = await getOrGenerateBriefing();
+    res.json({ ...result, cached: isCached });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/briefing/refresh ────────────────────────────────────────────────
+app.post("/api/briefing/refresh", async (req, res) => {
+  try {
+    briefingCache = { data: null, generatedAt: null };
+    const result = await getOrGenerateBriefing();
+    res.json({ ...result, cached: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── GET /api/focus-debt ───────────────────────────────────────────────────────
@@ -606,8 +666,19 @@ app.get("/api/sources", async (req, res) => {
 
 // ── GET /api/health ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
+  const mem = process.memoryUsage();
   res.json({
     status:         "ok",
+    uptime:         process.uptime(),
+    memory: {
+      heapUsedMB:  (mem.heapUsed / 1024 / 1024).toFixed(1),
+      heapTotalMB: (mem.heapTotal / 1024 / 1024).toFixed(1),
+      rssMB:       (mem.rss / 1024 / 1024).toFixed(1),
+    },
+    briefingCached:     !!briefingCache.data,
+    briefingAgeMinutes: briefingCache.generatedAt 
+      ? ((Date.now() - briefingCache.generatedAt) / 60000).toFixed(1) 
+      : null,
     mock_mode:      MOCK_MODE,
     github_owner:   GITHUB_OWNER || null,
     github_repo:    GITHUB_REPO  || null,
@@ -643,7 +714,8 @@ Keep replies under 150 words unless the user explicitly asks for something longe
       contents,
       generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
     };
-    const result = await geminiModel.generateContent(request);
+    const model = await getGeminiModel();
+    const result = await model.generateContent(request);
     const reply  = result.response.candidates[0].content.parts[0].text;
     return res.json({ reply: reply.trim() });
   } catch (e) {
@@ -671,7 +743,8 @@ async function generateSQL(schemaContext, question) {
     }
   }
 
-  const result = await geminiModel.generateContent(request)
+  const model = await getGeminiModel();
+  const result = await model.generateContent(request)
   return result.response.candidates[0].content.parts[0].text
 }
 
@@ -696,7 +769,8 @@ Format this data into a clean, readable response for the user.
 - If there are multiple rows, list them clearly with the key fields
 `
 
-  const completion = await groq.chat.completions.create({
+  const groqClient = await getGroqClient();
+  const completion = await groqClient.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.3,
@@ -907,19 +981,68 @@ app.post('/api/meridian', async (req, res) => {
        return res.status(500).json({ error: rawResult.source_error, sql });
     }
 
-    // Format with Groq
-    const formattedResponse = await formatResponse(question, sql, finalRows)
+    // Set headers for Server-Sent Events (SSE)
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-    res.json({ 
+    // Write metadata chunk first
+    res.write(`data: ${JSON.stringify({ 
+      type: 'meta', 
       sql, 
       rows: finalRows, 
       columns: rawResult.columns || [], 
-      response: formattedResponse,
-      isEmpty: !finalRows || finalRows.length === 0
-    })
+      isEmpty: !finalRows || finalRows.length === 0 
+    })}\n\n`);
+
+    if (!finalRows || finalRows.length === 0) {
+      const emptyMsg = `No results found for: "${question}". The query ran successfully but returned no data. This could mean there are no matching records, or the data source is currently empty.`;
+      res.write(`data: ${JSON.stringify({ type: 'content', content: emptyMsg })}\n\n`);
+    } else {
+      const prompt = `
+The user asked: "${question}"
+The SQL query that ran: ${sql}
+The raw data returned: ${JSON.stringify(finalRows, null, 2)}
+
+Format this data into a clean, readable response for the user.
+- Use a natural conversational tone
+- Present the data clearly — use a structured list or table format if there are multiple rows
+- Highlight the most important fields
+- Do not mention SQL or technical details
+- Be concise but complete
+- If there is only one row, summarize it naturally
+- If there are multiple rows, list them clearly with the key fields
+`;
+
+      const groqClient = await getGroqClient();
+      const stream = await groqClient.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1024,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          res.write(`data: ${JSON.stringify({ type: 'content', content })}\n\n`);
+        }
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } catch (e) {
     console.error('[meridian] error:', e.message)
-    res.status(500).json({ error: e.message })
+    // If headers have not been sent yet, send a 500 JSON error
+    if (!res.headersSent) {
+      res.status(500).json({ error: e.message })
+    } else {
+      // If we are already streaming, send an error event
+      res.write(`data: ${JSON.stringify({ type: 'error', error: e.message })}\n\n`);
+      res.end();
+    }
   }
 })
 
@@ -1012,6 +1135,11 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   startPulseJob();
   startStreamJob();
   console.log("[meridian] Background jobs started (pulse: 90s, stream: 5m)");
+
+  // Warm up Coral connection silently
+  setTimeout(() => {
+    runCoralQuery('SELECT 1').catch(() => {});
+  }, 2000);
 });
 
 server.on("error", (err) => {

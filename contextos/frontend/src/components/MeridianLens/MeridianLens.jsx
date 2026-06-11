@@ -115,9 +115,69 @@ export default function MeridianLens({ isOpen, onClose, activeTab }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: query.trim() }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to query");
-      setResponse(json);
+      
+      if (!res.ok) {
+        let errMessage = "Failed to query";
+        try {
+          const json = await res.json();
+          errMessage = json.error || errMessage;
+        } catch (_) {}
+        throw new Error(errMessage);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      
+      let sqlVal = "";
+      let rowsVal = [];
+      let colsVal = [];
+      let responseText = "";
+      let isEmptyVal = false;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const dataStr = trimmed.slice(6);
+          if (dataStr === "[DONE]") {
+            break;
+          }
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.type === "meta") {
+              sqlVal = parsed.sql;
+              rowsVal = parsed.rows || [];
+              colsVal = parsed.columns || [];
+              isEmptyVal = parsed.isEmpty;
+              
+              setResponse({
+                sql: sqlVal,
+                rows: rowsVal,
+                columns: colsVal,
+                isEmpty: isEmptyVal,
+                response: "",
+              });
+            } else if (parsed.type === "content") {
+              responseText += parsed.content;
+              setResponse((prev) => ({
+                ...(prev || {}),
+                response: responseText,
+              }));
+            } else if (parsed.type === "error") {
+              throw new Error(parsed.error || "Stream error");
+            }
+          } catch (err) {
+            console.error("Error parsing stream line:", err);
+          }
+        }
+      }
     } catch (e) {
       setResponse({ error: e.message });
     } finally {
