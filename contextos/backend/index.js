@@ -108,8 +108,19 @@ async function refreshGoogleToken() {
 setInterval(refreshGoogleToken, 45 * 60 * 1000);
 
 async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
-  try {
-    return await callCoreAgentJSON(`${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`, {
+  const request = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `${systemPrompt}\n\n${JSON.stringify(userContext, null, 2)}`,
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
       temperature: 0.4,
       maxOutputTokens: 2048,
     },
@@ -121,13 +132,26 @@ async function generateBriefing(systemPrompt, userContext, retriesLeft = 1) {
   const text = response.candidates[0].content.parts[0].text;
 
   try {
-    return JSON.parse(text);
+    let cleanText = text.trim();
+    if (cleanText.startsWith("```json")) {
+      cleanText = cleanText.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
+    } else if (cleanText.startsWith("```")) {
+      cleanText = cleanText.replace(/^```\s*/, "").replace(/\s*```$/, "");
+    }
+
+    try {
+      return JSON.parse(cleanText);
+    } catch (err) {
+      const match = cleanText.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+      throw err;
+    }
   } catch (e) {
     if (retriesLeft > 0) {
       console.warn("[vertex] JSON parsing failed. Retrying once... Raw text was:", text);
       return generateBriefing(systemPrompt, userContext, retriesLeft - 1);
     }
-    console.error("[vertex] Failed to parse JSON response:", text);
+    console.error("[gemini] Failed to parse JSON response:", text);
     return {
       situation: "Briefing generation failed - model returned malformed response.",
       beforeYouStart: [],
@@ -680,8 +704,8 @@ Keep replies under 150 words unless the user explicitly asks for something longe
   ];
 
   try {
-    const reply = await callCoreAgent(null, {
-      systemInstruction: systemPrompt,
+    const request = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
       contents,
       generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
     };
