@@ -48,7 +48,6 @@ async function getGroqClient() {
 
 const PORT = process.env.PORT || 3001;
 const MOCK_MODE = process.env.MOCK_MODE === "true";
-const EFFECTIVE_MOCK_MODE = MOCK_MODE || !coralAvailable;
 const GITHUB_ENABLED = process.env.GITHUB_ENABLED === "true";
 const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "";
@@ -206,18 +205,20 @@ initCoralSources();
 function runCoralQuery(sql, timeoutMs = 30_000) {
   return coralQueue.add(() => new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
-    if (!coralAvailable) {
-      return reject(new Error("Coral CLI not available. Set CORAL_PATH or enable MOCK_MODE=true."));
-    }
-
     const env = buildCoralEnv();
-    execFile(
-      coralCommand,
-      ["sql", normalized],
-      { timeout: timeoutMs, env },
+    const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
+    const cmd = `${coralCmd} sql "${normalized}"`;
+    exec(
+      cmd,
+      { timeout: timeoutMs, env, shell: true },
       (err, stdout, stderr) => {
         if (err) {
           if (err.killed || err.signal === "SIGTERM") return reject(new Error("timeout"));
+          if (err.code === 'ENOENT' || /not recognized as an internal or external command/.test(stderr || '')) {
+            const msg = `coral command not found. Set CORAL_PATH to the full path to coral.exe or ensure coral is on PATH.`;
+            console.warn('[coral] ENOENT:', msg);
+            return reject(new Error(msg));
+          }
           return reject(new Error(stderr?.trim() || err.message));
         }
         resolve(stdout);
@@ -253,10 +254,10 @@ app.post("/api/query", async (req, res) => {
   if (!sql || typeof sql !== "string") {
     return res.status(400).json({ error: "sql field is required" });
   }
-  if (EFFECTIVE_MOCK_MODE) {
+  if (MOCK_MODE) {
     return res.json({
       columns: ["result"],
-      rows: [{ result: coralAvailable ? "MOCK_MODE=true -- set MOCK_MODE=false and restart to run real queries" : "Coral CLI is unavailable; backend is running in fallback mode." }],
+      rows: [{ result: "MOCK_MODE=true -- set MOCK_MODE=false and restart to run real queries" }],
       mock: true,
     });
   }
@@ -271,7 +272,7 @@ app.post("/api/query", async (req, res) => {
 
 // ── GET /api/schema ───────────────────────────────────────────────────────────
 app.get("/api/schema", async (req, res) => {
-  if (EFFECTIVE_MOCK_MODE) {
+  if (MOCK_MODE) {
     return res.json({
       columns: ["schema_name", "table_name"],
       rows: [
@@ -311,7 +312,7 @@ let briefingInFlight = null;
 async function fetchAndGenerateBriefing() {
   let sources;
 
-  if (EFFECTIVE_MOCK_MODE) {
+  if (MOCK_MODE) {
     sources = {
       calendar:       { rows: mockCalendarEvents,  source_error: null },
       github_issues:  { rows: mockGithubPRs,       source_error: null },
@@ -379,9 +380,9 @@ async function fetchAndGenerateBriefing() {
     .map(([k]) => k);
 
   // ── Synthesis ──────────────────────────────────────────────────────────────
-  let briefing = EFFECTIVE_MOCK_MODE ? mockBriefing : null;
+  let briefing = MOCK_MODE ? mockBriefing : null;
 
-  if (!EFFECTIVE_MOCK_MODE) {
+  if (!MOCK_MODE) {
     const now      = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
@@ -556,7 +557,7 @@ app.post("/api/briefing/refresh", async (req, res) => {
 
 // ── GET /api/focus-debt ───────────────────────────────────────────────────────
 app.get("/api/focus-debt", async (req, res) => {
-  if (EFFECTIVE_MOCK_MODE) return res.json(mockFocusDebt);
+  if (MOCK_MODE) return res.json(mockFocusDebt);
 
   const [notionResult, githubResult] = await Promise.all([
     safeQuery("SELECT * FROM notion.search LIMIT 50", "notion"),
@@ -596,7 +597,7 @@ app.get("/api/focus-debt", async (req, res) => {
 
 // ── GET /api/unfinished-loops ─────────────────────────────────────────────────
 app.get("/api/unfinished-loops", async (req, res) => {
-  if (EFFECTIVE_MOCK_MODE) return res.json(mockUnfinishedLoops);
+  if (MOCK_MODE) return res.json(mockUnfinishedLoops);
 
   const [githubResult, notionResult] = await Promise.all([
     GITHUB_ENABLED && GITHUB_OWNER && GITHUB_REPO
@@ -638,7 +639,7 @@ app.get("/api/unfinished-loops", async (req, res) => {
 
 // ── GET /api/sources ──────────────────────────────────────────────────────────
 app.get("/api/sources", async (req, res) => {
-  if (EFFECTIVE_MOCK_MODE) return res.json(mockSources);
+  if (MOCK_MODE) return res.json(mockSources);
 
   const KNOWN = ["google_calendar", "github", "gmail", "slack", "notion", "discord"];
   try {

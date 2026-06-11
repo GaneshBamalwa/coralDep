@@ -13,8 +13,6 @@ import PQueue from "p-queue";
 import { exec }         from "child_process";
 import dotenv           from "dotenv";
 import { parseCoralOutput } from "./coralParser.js";
-import { coreAgent as geminiModel, callCoreAgent, callCoreAgentJSON, parseAgentJSON } from "./vertexAgent.js";
-import { coralAvailable, coralCommand } from "./coralRuntime.js";
 
 dotenv.config({ path: "../.env" });
 
@@ -114,14 +112,10 @@ export async function callGeminiJSON(prompt, opts = {}) {
 export function runCoralQuery(sql, timeoutMs = 30_000) {
   return coralQueue.add(() => new Promise((resolve, reject) => {
     const normalized = sql.replace(/\s+/g, " ").trim().replace(/"/g, '\\"');
-    if (!coralAvailable) {
-      return reject(new Error("Coral CLI not available. Set CORAL_PATH or enable MOCK_MODE=true."));
-    }
-
-    execFile(
-      coralCommand,
-      ["sql", normalized],
-      { timeout: timeoutMs, env: process.env },
+    const coralCmd = process.env.CORAL_CMD || (process.env.CORAL_PATH ? process.env.CORAL_PATH : 'coral');
+    exec(
+      `${coralCmd} sql "${normalized}"`,
+      { timeout: timeoutMs, env: process.env, shell: false },
       (err, stdout, stderr) => {
         if (err) {
           if (err.killed || err.signal === "SIGTERM") return reject(new Error("timeout"));
